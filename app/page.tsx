@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import {
   Brain, History, LogIn, TrendingUp, PlusCircle, CheckCircle2,
-  Flame, Zap, Droplets, Info, Clock, LogOut, Loader2, Trophy, Target, Scale
+  Flame, Zap, Droplets, Info, Clock, LogOut, Loader2, Trophy, Target, Scale, UtensilsCrossed, ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
@@ -102,6 +102,62 @@ const BADGES: Badge[] = [
 
 const GOAL_OPTIONS = [14, 16, 18, 20, 24, 36, 48];
 
+type RefeedFood = { emoji: string; label: string; quality: 'excellent'|'good'|'fair'|'avoid'; nextFastBonus: string; insulin: string; science: string; nextFastImpact: string; };
+const REFEED_FOODS: RefeedFood[] = [
+  { emoji:'🍲', label:'Bone Broth',   quality:'excellent', nextFastBonus:'+1-2h',  insulin:'none',     science:'Zero insulin response. Electrolytes, collagen, and gelatin gently prime the gut without triggering digestion enzymes. The gold standard refeed.',                nextFastImpact:'Your electrolytes reset cleanly. Next fast will feel easier to start — hunger is blunted and gut is settled.' },
+  { emoji:'🥚', label:'Eggs',         quality:'excellent', nextFastBonus:'+1h',    insulin:'minimal',  science:'High protein, near-zero carb. Minimal insulin response (~2-3 mU/L). Leucine content triggers muscle protein synthesis without refilling glycogen.',          nextFastImpact:'Glycogen stays low. Fat-burning enzymes remain active. Your next fast enters ketosis ~2h faster.' },
+  { emoji:'🥑', label:'Avocado',      quality:'excellent', nextFastBonus:'+1h',    insulin:'minimal',  science:'Monounsaturated fat with minimal carbs. Essentially zero insulin response. Provides satiety without disrupting the ketogenic state.',                        nextFastImpact:'Ketones may remain measurable through the night. Next morning fast starts from a fat-adapted baseline.' },
+  { emoji:'🍗', label:'Protein',      quality:'good',      nextFastBonus:'+0.5h',  insulin:'moderate', science:'Protein triggers some insulin (via amino acids), but far less than carbs. Glucagon also rises, partially offsetting fat storage. Net effect: muscle is protected, glycogen stays low.', nextFastImpact:'Modest glycogen replenishment. Next fast needs ~1h extra to clear glycogen before entering fat burning.' },
+  { emoji:'🥗', label:'Salad',        quality:'good',      nextFastBonus:'+0.5h',  insulin:'low',      science:'Fiber slows any glucose absorption dramatically. Low-calorie density means low insulin. Adding protein or fat dressing improves the response further.',      nextFastImpact:'Gut microbiome gets fiber; next fast morning gut motility is better. Mild glycogen refill only.' },
+  { emoji:'🍌', label:'Fruit',        quality:'fair',      nextFastBonus:'-0.5h',  insulin:'moderate', science:'Fructose is processed by the liver (not muscles), which can partially refill liver glycogen — the exact store your fast depleted. Insulin spike is moderate.', nextFastImpact:'Liver glycogen partially refilled. Next fast takes 1-2h longer to reach fat-burning phase.' },
+  { emoji:'🍚', label:'Rice/Carbs',   quality:'fair',      nextFastBonus:'-1h',    insulin:'high',     science:'High-glycemic carbs spike insulin strongly (~60-80 mU/L). Muscle and liver glycogen refill rapidly. Fat oxidation is suppressed for 3-4h post-meal.',      nextFastImpact:'Full glycogen reload. Next fast requires 4-6h longer to work through glycogen before fat burning begins.' },
+  { emoji:'🍕', label:'Full Meal',    quality:'avoid',     nextFastBonus:'-2h',    insulin:'very high',science:'Mixed macros create a large, sustained insulin response. Glycogen fills completely, triglycerides rise. All fat-burning mechanisms fully suppressed for 4-6h.',  nextFastImpact:'Complete metabolic reset. Next fast essentially starts from zero — no residual fat-adapted benefit carries over.' },
+  { emoji:'🍫', label:'Sugar',        quality:'avoid',     nextFastBonus:'-3h',    insulin:'extreme',  science:'Pure glucose/fructose — maximal insulin spike. Dopamine surge creates cravings within hours. This is the worst possible refeed choice after a meaningful fast.', nextFastImpact:'Worst outcome: insulin spike triggers fat storage, glycogen overfills, and cravings make starting the next fast significantly harder.' },
+];
+
+const QUALITY_COLORS: Record<string, string> = {
+  excellent: 'border-green-500/40 bg-green-500/10 text-green-300',
+  good:      'border-cyan-500/30  bg-cyan-500/10  text-cyan-300',
+  fair:      'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
+  avoid:     'border-red-500/30   bg-red-500/10   text-red-300',
+};
+
+const getRefeedGuidance = (hours: number) => {
+  if (hours >= 48) return {
+    title: 'Extended Fast Refeed (48h+)',
+    urgent: 'Careful — your GI tract has been fully resting. Refeeding syndrome is a real risk.',
+    steps: [
+      '🍲 Start with bone broth only — nothing solid for 30-60 min',
+      '🥚 Small protein serving next — eggs or white fish',
+      '🚫 No raw vegetables, dairy, or large portions for first meal',
+      '⏱ Space meals 2-3h apart for the first day',
+      '💧 Keep hydrating — your body will pull fluid into cells rapidly',
+    ],
+  };
+  if (hours >= 24) return {
+    title: '24h Fast Refeed Protocol',
+    urgent: 'Your stomach acid and enzyme production is significantly reduced.',
+    steps: [
+      '🍲 Bone broth or small protein first — give your gut 20-30 min',
+      '🥚 Eggs or fish as your first real meal — easy to digest',
+      '🚫 Avoid high-fiber raw veg and dairy for the first meal',
+      '🍚 Complex carbs are fine post-24h — glycogen is depleted',
+      '⏱ Wait 45 min between first and second meal',
+    ],
+  };
+  return {
+    title: '16-20h Fast Refeed Protocol',
+    urgent: 'Your insulin sensitivity is at its peak right now — use it wisely.',
+    steps: [
+      '🥚 Prioritize protein + fat first (eggs, avocado, nuts)',
+      '🚫 Avoid sugar and refined carbs — insulin spike will hit hard',
+      '⏱ Wait 20 min before eating a full meal',
+      '💧 Continue hydrating — hunger may be partly thirst',
+      '🍚 If eating carbs, add protein first to blunt the glucose spike',
+    ],
+  };
+};
+
 const MP_ACTIONS = [
   { icon: Brain,    color: 'purple', points: 10, label: 'No Late Snack',    science: 'Late-night eating disrupts circadian insulin rhythms. A strict 10pm cutoff extends your overnight fast by 1-2h and improves morning cortisol response, boosting fat mobilization.' },
   { icon: Zap,      color: 'cyan',   points: 20, label: 'Walk vs Lunch',    science: 'Walking instead of eating during lunch keeps insulin suppressed, maintains ketone production, and activates GLUT4 in muscles. Studies show a 20-min walk reduces post-meal glucose by 30%.' },
@@ -130,6 +186,9 @@ export default function Home() {
   const [weightLog, setWeightLog] = useState<{weight:number;ts:string}[]>([]);
   const [weightInput, setWeightInput] = useState("");
   const [showWeightInput, setShowWeightInput] = useState(false);
+  const [refeedLogged, setRefeedLogged] = useState<RefeedFood | null>(null);
+  const [showRefeedSection, setShowRefeedSection] = useState(true);
+  const [showEndFastModal, setShowEndFastModal] = useState(false);
 
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -313,6 +372,31 @@ export default function Home() {
 
   const triggerScan = () => { setShowScanner(true); setTimeout(() => setShowScanner(false), 2000); };
 
+  const logRefeed = async (food: RefeedFood) => {
+    setRefeedLogged(food);
+    if (session) await supabase.from('profiles').update({ last_refeed: food.label }).eq('id', session.user.id);
+  };
+
+  const endFast = async () => {
+    // Award streak point and save completed fast
+    const newStreak = streak + 1;
+    const completedH = currentH;
+    const newMax = Math.max(maxHoursEver, completedH);
+    setStreak(newStreak);
+    setMaxHoursEver(newMax);
+    const newBadges = checkAndAwardBadges(newMax, newStreak, totalMpEver, activityCount, badgesEarned);
+    setShowEndFastModal(false);
+    // Reset fast state
+    setStartTime(null); setElapsed(0); setBonus(0); setAccelerantMinutes(0);
+    setActivityLog([]); setWaterCount(0); setElectrolyteCount(0); setRefeedLogged(null);
+    goalReachedRef.current = false;
+    if (session) await supabase.from('profiles').update({
+      streak: newStreak, max_hours_ever: newMax, fast_start_time: null,
+      accelerant_minutes: 0, activity_log: '[]', water_count: 0, electrolyte_count: 0,
+      badges_earned: JSON.stringify(newBadges),
+    }).eq('id', session.user.id);
+  };
+
   const streakMultiplier = Math.min(3, 1 + streak * 0.1);
 
   const addMp = async (base: number) => {
@@ -346,6 +430,31 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-[#f4f7fb]">
+
+      {/* ── END FAST CONFIRMATION ── */}
+      <AnimatePresence>
+        {showEndFastModal && (
+          <>
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              onClick={() => setShowEndFastModal(false)}
+              className="fixed inset-0 bg-black/80 z-[200] backdrop-blur-sm" />
+            <motion.div initial={{ opacity:0, scale:0.9, y:20 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.9 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-[#0f131c] border-2 border-orange-500/30 rounded-[2.5rem] p-8 z-[201] shadow-2xl text-center">
+              <div className="text-5xl mb-4">🏁</div>
+              <h2 className="text-2xl font-black text-white mb-2 tracking-tighter">End Your Fast?</h2>
+              <p className="text-[#98a4bb] text-sm mb-2">You've gone <span className="text-white font-black">{currentH.toFixed(1)}h</span> — that's a {streak+1}-day streak.</p>
+              {!refeedLogged && <p className="text-yellow-400 text-xs mb-6 font-bold">💡 Tip: Log your refeed below before ending for best tracking.</p>}
+              {refeedLogged && <p className="text-green-400 text-xs mb-6 font-bold">✓ Refeed logged: {refeedLogged.emoji} {refeedLogged.label}</p>}
+              <div className="flex gap-3">
+                <button onClick={() => setShowEndFastModal(false)}
+                  className="flex-1 bg-white/5 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl">KEEP GOING</button>
+                <button onClick={endFast}
+                  className="flex-1 bg-gradient-to-br from-orange-400 to-red-500 text-white font-black py-4 rounded-2xl">END FAST</button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── GOAL CELEBRATION ── */}
       <AnimatePresence>
@@ -510,9 +619,15 @@ export default function Home() {
               <LogIn className="w-5 h-5 text-cyan-400" /> {loading ? <Loader2 className="animate-spin" /> : "SIGN IN"}
             </button>
           )}
+          {startTime && (
+            <button onClick={() => setShowEndFastModal(true)}
+              className="bg-gradient-to-br from-orange-400 to-red-500 text-white font-black px-6 py-4 rounded-2xl shadow-xl shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight uppercase">
+              END FAST
+            </button>
+          )}
           <button onClick={openStartPicker}
             className="bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight uppercase">
-            START FAST
+            {startTime ? 'RESTART' : 'START FAST'}
           </button>
         </div>
       </header>
@@ -872,6 +987,126 @@ export default function Home() {
               <p className="text-center text-[0.65rem] text-[#4b5563] mt-4">Complete your first {goalHours}h fast to unlock your first badge. Hover any badge to learn the science.</p>
             )}
           </section>
+
+          {/* ── REFEED PROTOCOL ── */}
+          {(() => {
+            const guidance = getRefeedGuidance(currentH);
+            const state = goalProgress < 75 ? 'locked' : goalProgress < 100 ? 'approaching' : 'ready';
+            return (
+              <section className={`border rounded-[2.5rem] p-8 transition-all ${state==='ready' ? 'bg-green-500/5 border-green-500/20' : state==='approaching' ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                <button onClick={() => setShowRefeedSection(s => !s)}
+                  className="w-full flex items-center justify-between mb-0">
+                  <h2 className="text-[0.65rem] uppercase tracking-[0.2em] font-black flex items-center gap-2
+                    ${state==='ready'?'text-green-400':state==='approaching'?'text-yellow-400':'text-[#4b5563]'}">
+                    <UtensilsCrossed className={`w-4 h-4 ${state==='ready'?'text-green-400':state==='approaching'?'text-yellow-400':'text-[#4b5563]'}`} />
+                    <span className={state==='ready'?'text-green-400':state==='approaching'?'text-yellow-400':'text-[#4b5563]'}>
+                      Refeed Protocol
+                    </span>
+                    {state==='locked' && <span className="text-[0.55rem] text-[#4b5563] ml-1">— unlocks at {Math.round(goalHours*0.75)}h</span>}
+                    {state==='approaching' && <span className="text-[0.55rem] text-yellow-500 ml-1">— approaching goal</span>}
+                    {state==='ready' && <span className="text-[0.55rem] text-green-500 ml-1">— READY TO BREAK</span>}
+                  </h2>
+                  <ChevronDown className={`w-4 h-4 text-[#4b5563] transition-transform ${showRefeedSection?'rotate-180':''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {showRefeedSection && (
+                    <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }}
+                      exit={{ opacity:0, height:0 }} className="overflow-hidden">
+                      <div className="pt-6">
+
+                        {state === 'locked' && (
+                          <div className="text-center py-6">
+                            <div className="text-4xl mb-3">🔒</div>
+                            <p className="text-[#4b5563] text-xs">Complete <span className="text-white font-bold">{Math.round(goalHours*0.75)}h</span> of your fast to unlock personalized refeed guidance.</p>
+                            <div className="mt-4 h-1.5 bg-black/40 rounded-full overflow-hidden">
+                              <div className="h-full bg-[#1c2333] rounded-full" style={{ width:`${(goalProgress/75)*100}%` }} />
+                            </div>
+                            <div className="text-[0.6rem] text-[#4b5563] mt-1">{goalProgress.toFixed(0)}% / 75% needed</div>
+                          </div>
+                        )}
+
+                        {(state === 'approaching' || state === 'ready') && (
+                          <>
+                            {/* Guidance header */}
+                            <div className={`rounded-2xl p-4 mb-4 border ${state==='ready'?'bg-green-500/10 border-green-500/20':'bg-yellow-500/10 border-yellow-500/20'}`}>
+                              <div className={`text-xs font-black mb-2 ${state==='ready'?'text-green-400':'text-yellow-400'}`}>{guidance.title}</div>
+                              <p className={`text-[0.65rem] font-bold mb-3 ${state==='ready'?'text-green-200':'text-yellow-200'}`}>⚠️ {guidance.urgent}</p>
+                              <ul className="space-y-1.5">
+                                {guidance.steps.map((step, i) => (
+                                  <li key={i} className="text-[0.65rem] text-[#c8d4e8] leading-relaxed">{step}</li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            {/* Food choices */}
+                            <div className="mb-4">
+                              <div className="text-[0.6rem] font-black uppercase tracking-widest text-[#4b5563] mb-3">
+                                {state==='ready' ? '📋 Log your refeed — tap to select' : '👀 Preview your options'}
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                {REFEED_FOODS.map(food => (
+                                  <Tooltip key={food.label} content={
+                                    <div>
+                                      <div className="font-black text-white mb-1">{food.emoji} {food.label}</div>
+                                      <div className={`text-[0.6rem] font-black uppercase mb-2 ${food.quality==='excellent'?'text-green-400':food.quality==='good'?'text-cyan-400':food.quality==='fair'?'text-yellow-400':'text-red-400'}`}>
+                                        Insulin: {food.insulin} · Next fast: {food.nextFastBonus}
+                                      </div>
+                                      <p className="text-[0.65rem] mb-2">{food.science}</p>
+                                      <div className="border-t border-white/10 pt-2">
+                                        <div className="text-[0.6rem] font-black text-purple-400 mb-1">⚡ Next Fast Impact</div>
+                                        <p className="text-[0.65rem]">{food.nextFastImpact}</p>
+                                      </div>
+                                    </div>
+                                  }>
+                                    <button
+                                      onClick={() => state==='ready' && logRefeed(food)}
+                                      className={`w-full flex flex-col items-center gap-1 p-2.5 rounded-2xl border transition-all text-center
+                                        ${refeedLogged?.label===food.label ? QUALITY_COLORS[food.quality]+' scale-105 shadow-lg' :
+                                          state==='ready' ? 'bg-white/5 border-white/10 hover:'+QUALITY_COLORS[food.quality]+' cursor-pointer' :
+                                          'bg-white/[0.02] border-white/5 opacity-50 cursor-default'}`}>
+                                      <span className="text-xl">{food.emoji}</span>
+                                      <span className="text-[0.5rem] font-black text-[#98a4bb] leading-tight">{food.label}</span>
+                                      <span className={`text-[0.5rem] font-black ${food.nextFastBonus.startsWith('+') ? 'text-green-400' : food.nextFastBonus==='+0h'?'text-cyan-400':'text-red-400'}`}>
+                                        {food.nextFastBonus}
+                                      </span>
+                                    </button>
+                                  </Tooltip>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Next fast impact summary */}
+                            {refeedLogged && (
+                              <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
+                                className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 mb-4">
+                                <div className="text-[0.6rem] font-black uppercase tracking-widest text-purple-400 mb-2">⚡ Impact on Your Next Fast</div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-lg">{refeedLogged.emoji}</span>
+                                  <span className="text-white font-black text-sm">{refeedLogged.label}</span>
+                                  <span className={`text-xs font-black ml-auto px-2 py-0.5 rounded-full border ${QUALITY_COLORS[refeedLogged.quality]}`}>
+                                    {refeedLogged.quality}
+                                  </span>
+                                </div>
+                                <p className="text-[0.65rem] text-purple-100 leading-relaxed">{refeedLogged.nextFastImpact}</p>
+                              </motion.div>
+                            )}
+
+                            {state==='ready' && (
+                              <button onClick={() => setShowEndFastModal(true)}
+                                className="w-full bg-gradient-to-br from-orange-400 to-red-500 text-white font-black py-4 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                🏁 End Fast & Complete
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </section>
+            );
+          })()}
         </div>
 
         {/* ── RIGHT COLUMN: ROADMAP ── */}

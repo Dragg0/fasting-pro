@@ -44,6 +44,8 @@ export default function Home() {
   const [showScanner, setShowScanner] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [pickerValue, setPickerValue] = useState("");
+  const [showWalkModal, setShowWalkModal] = useState(false);
+  const [walkMinutes, setWalkMinutes] = useState(30);
 
   useEffect(() => {
     setMounted(true);
@@ -166,6 +168,24 @@ export default function Home() {
     setTimeout(() => setShowScanner(false), 2000);
   };
 
+  const confirmWalk = async () => {
+    // Walk accelerant: 2 min of fasting per 1 min of walking (30min walk = 1h bonus)
+    const accelMinutes = walkMinutes * 2;
+    const accelHours = accelMinutes / 60;
+    const newBonus = bonus + accelHours;
+    const newAccelTotal = (accelerantMinutes + accelMinutes);
+    setBonus(newBonus);
+    setAccelerantMinutes(newAccelTotal);
+    setShowWalkModal(false);
+    triggerScan();
+
+    if (session) {
+      await supabase.from('profiles').update({ 
+        accelerant_minutes: newAccelTotal 
+      }).eq('id', session.user.id);
+    }
+  };
+
   const addMp = async (points: number) => {
     const newMp = mp + points;
     setMp(newMp);
@@ -193,6 +213,70 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-[#f4f7fb]">
+      {/* WALK MODAL */}
+      <AnimatePresence>
+        {showWalkModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowWalkModal(false)}
+              className="fixed inset-0 bg-black/80 z-[100] backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-[#0f131c] border-2 border-cyan-500/30 rounded-[2.5rem] p-8 z-[101] shadow-2xl"
+            >
+              <div className="text-4xl mb-3">🚶</div>
+              <h2 className="text-2xl font-black text-white mb-1 tracking-tighter">Log a Walk</h2>
+              <p className="text-[#98a4bb] text-sm mb-6">Every 1 min of walking accelerates your fast by 2 min.</p>
+              
+              <div className="mb-2">
+                <label className="text-[0.65rem] font-black uppercase tracking-widest text-[#98a4bb] mb-2 block">Walk Duration (minutes)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={300}
+                  value={walkMinutes}
+                  onChange={e => setWalkMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full bg-black/40 border border-white/10 text-white text-2xl font-black rounded-2xl px-4 py-3 focus:outline-none focus:border-cyan-500/50 text-center"
+                />
+              </div>
+              <div className="text-center text-cyan-400 font-bold text-sm mb-6">
+                = +{(walkMinutes * 2 / 60).toFixed(2)}h fasting bonus
+              </div>
+
+              {/* Quick presets */}
+              <div className="flex gap-2 mb-6">
+                {[15, 30, 45, 60].map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setWalkMinutes(m)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-black transition-all border ${walkMinutes === m ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-white/5 border-white/5 text-[#98a4bb]'}`}
+                  >
+                    {m}m
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowWalkModal(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl transition-all"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={confirmWalk}
+                  className="flex-1 bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  LOG IT
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* START FAST TIME PICKER MODAL */}
       <AnimatePresence>
         {showStartPicker && (
@@ -394,7 +478,7 @@ export default function Home() {
           <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
              <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4">Accelerants</h2>
              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => { setBonus(prev => prev + 0.5); triggerScan(); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-3 rounded-2xl text-[0.65rem] font-bold transition-all text-[#98a4bb]">
+                <button onClick={() => setShowWalkModal(true)} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-3 rounded-2xl text-[0.65rem] font-bold transition-all text-[#98a4bb]">
                    🚶 WALK
                 </button>
                 <button onClick={() => { setBonus(prev => prev + 1.5); triggerScan(); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-3 rounded-2xl text-[0.65rem] font-bold transition-all text-[#98a4bb]">

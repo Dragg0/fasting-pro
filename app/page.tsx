@@ -44,9 +44,19 @@ export default function Home() {
   const [showScanner, setShowScanner] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [pickerValue, setPickerValue] = useState("");
+  const [showActivityModal, setShowActivityModal] = useState(false);
   const [showWalkModal, setShowWalkModal] = useState(false);
   const [walkMinutes, setWalkMinutes] = useState(30);
+  const [selectedActivity, setSelectedActivity] = useState<{emoji: string; label: string; multiplier: number} | null>(null);
+  const [activityMinutes, setActivityMinutes] = useState(30);
   const [activityLog, setActivityLog] = useState<{emoji: string; label: string; minutes: number; bonusH: number; ts: string}[]>([]);
+
+  const ACTIVITIES = [
+    { emoji: "🚶", label: "Walk",       multiplier: 2   },
+    { emoji: "🏃", label: "Run",        multiplier: 3   },
+    { emoji: "🏓", label: "Pickleball", multiplier: 2.5 },
+    { emoji: "🏋️", label: "Lift",       multiplier: 2.5 },
+  ];
 
   useEffect(() => {
     setMounted(true);
@@ -172,21 +182,28 @@ export default function Home() {
     setTimeout(() => setShowScanner(false), 2000);
   };
 
-  const confirmWalk = async () => {
-    const accelMinutes = walkMinutes * 2;
+  const openActivity = (act: typeof ACTIVITIES[0]) => {
+    setSelectedActivity(act);
+    setActivityMinutes(30);
+    setShowActivityModal(true);
+  };
+
+  const confirmActivity = async () => {
+    if (!selectedActivity) return;
+    const accelMinutes = activityMinutes * selectedActivity.multiplier;
     const accelHours = accelMinutes / 60;
     const newBonus = bonus + accelHours;
-    const newAccelTotal = accelerantMinutes + accelMinutes;
-    const entry = { emoji: "🚶", label: "Walk", minutes: walkMinutes, bonusH: accelHours, ts: new Date().toISOString() };
+    const newAccelTotal = accelerantMinutes + Math.round(accelMinutes);
+    const entry = { emoji: selectedActivity.emoji, label: selectedActivity.label, minutes: activityMinutes, bonusH: accelHours, ts: new Date().toISOString() };
     const newLog = [entry, ...activityLog];
     setBonus(newBonus);
     setAccelerantMinutes(newAccelTotal);
     setActivityLog(newLog);
-    setShowWalkModal(false);
+    setShowActivityModal(false);
     triggerScan();
 
     if (session) {
-      await supabase.from('profiles').update({ 
+      await supabase.from('profiles').update({
         accelerant_minutes: newAccelTotal,
         activity_log: JSON.stringify(newLog),
       }).eq('id', session.user.id);
@@ -220,60 +237,58 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-[#f4f7fb]">
-      {/* WALK MODAL */}
+      {/* ACTIVITY MODAL */}
       <AnimatePresence>
-        {showWalkModal && (
+        {showActivityModal && selectedActivity && (
           <>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setShowWalkModal(false)}
+              onClick={() => setShowActivityModal(false)}
               className="fixed inset-0 bg-black/80 z-[100] backdrop-blur-sm"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-[#0f131c] border-2 border-cyan-500/30 rounded-[2.5rem] p-8 z-[101] shadow-2xl"
             >
-              <div className="text-4xl mb-3">🚶</div>
-              <h2 className="text-2xl font-black text-white mb-1 tracking-tighter">Log a Walk</h2>
-              <p className="text-[#98a4bb] text-sm mb-6">Every 1 min of walking accelerates your fast by 2 min.</p>
-              
+              <div className="text-4xl mb-3">{selectedActivity.emoji}</div>
+              <h2 className="text-2xl font-black text-white mb-1 tracking-tighter">Log {selectedActivity.label}</h2>
+              <p className="text-[#98a4bb] text-sm mb-6">
+                {selectedActivity.multiplier}x multiplier — {selectedActivity.multiplier} min fasting per 1 min of activity.
+              </p>
               <div className="mb-2">
-                <label className="text-[0.65rem] font-black uppercase tracking-widest text-[#98a4bb] mb-2 block">Walk Duration (minutes)</label>
+                <label className="text-[0.65rem] font-black uppercase tracking-widest text-[#98a4bb] mb-2 block">Duration (minutes)</label>
                 <input
                   type="number"
                   min={1}
                   max={300}
-                  value={walkMinutes}
-                  onChange={e => setWalkMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                  value={activityMinutes}
+                  onChange={e => setActivityMinutes(Math.max(1, parseInt(e.target.value) || 1))}
                   className="w-full bg-black/40 border border-white/10 text-white text-2xl font-black rounded-2xl px-4 py-3 focus:outline-none focus:border-cyan-500/50 text-center"
                 />
               </div>
               <div className="text-center text-cyan-400 font-bold text-sm mb-6">
-                = +{(walkMinutes * 2 / 60).toFixed(2)}h fasting bonus
+                = +{(activityMinutes * selectedActivity.multiplier / 60).toFixed(2)}h fasting bonus
               </div>
-
-              {/* Quick presets */}
               <div className="flex gap-2 mb-6">
                 {[15, 30, 45, 60].map(m => (
                   <button
                     key={m}
-                    onClick={() => setWalkMinutes(m)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-black transition-all border ${walkMinutes === m ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-white/5 border-white/5 text-[#98a4bb]'}`}
+                    onClick={() => setActivityMinutes(m)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-black transition-all border ${activityMinutes === m ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-white/5 border-white/5 text-[#98a4bb]'}`}
                   >
                     {m}m
                   </button>
                 ))}
               </div>
-
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowWalkModal(false)}
+                  onClick={() => setShowActivityModal(false)}
                   className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl transition-all"
                 >
                   CANCEL
                 </button>
                 <button
-                  onClick={confirmWalk}
+                  onClick={confirmActivity}
                   className="flex-1 bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
                   LOG IT
@@ -485,12 +500,15 @@ export default function Home() {
           <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
              <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4">Accelerants</h2>
              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => setShowWalkModal(true)} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-3 rounded-2xl text-[0.65rem] font-bold transition-all text-[#98a4bb]">
-                   🚶 WALK
-                </button>
-                <button onClick={() => { setBonus(prev => prev + 1.5); triggerScan(); }} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-3 rounded-2xl text-[0.65rem] font-bold transition-all text-[#98a4bb]">
-                   🏓 PICKLEBALL
-                </button>
+                {ACTIVITIES.map(act => (
+                  <button
+                    key={act.label}
+                    onClick={() => openActivity(act)}
+                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-3 rounded-2xl text-[0.65rem] font-bold transition-all text-[#98a4bb] hover:text-white"
+                  >
+                    {act.emoji} {act.label.toUpperCase()}
+                  </button>
+                ))}
              </div>
           </section>
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { 
   Brain, FlaskConical, History, LogIn, TrendingUp,
   Map as MapIcon, PlusCircle, CheckCircle2, Flame,
-  Zap, Droplets, Info, Clock
+  Zap, Droplets, Info, Clock, LogOut, Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 // Types
 type Phase = {
@@ -31,29 +32,65 @@ const PHASES: Phase[] = [
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [bonus, setBonus] = useState(0);
   const [mp, setMp] = useState(0);
   const [streak, setStreak] = useState(1);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  
+
   useEffect(() => {
     setMounted(true);
-    const interval = setInterval(() => {
-      setElapsed(prev => prev + 0.01);
-    }, 36000);
-    return () => clearInterval(interval);
+    
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) fetchUserData(session.user.id);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) fetchUserData(session.user.id);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserData = async (userId: string) => {
+    // Basic fetch logic for when we have the table ready
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (data) {
+      setMp(data.mind_points || 0);
+      setStreak(data.streak || 0);
+    }
+  };
+
+  const handleAuth = async () => {
+    const email = prompt("Enter your email for the 'Second Brain' login:");
+    if (!email) return;
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin }
+    });
+    if (error) alert(error.message);
+    else alert("Check your email for the magic login link!");
+  };
 
   const triggerScan = () => {
     setShowScanner(true);
     setTimeout(() => setShowScanner(false), 2000);
   };
 
-  const addMp = (points: number) => {
-    setMp(prev => prev + points);
-    // Future: Add confetti/sparkle effect
+  const addMp = async (points: number) => {
+    const newMp = mp + points;
+    setMp(newMp);
+    
+    if (session) {
+      await supabase.from('profiles').update({ mind_points: newMp }).eq('id', session.user.id);
+    }
   };
 
   if (!mounted) return null;
@@ -106,13 +143,25 @@ export default function Home() {
           <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-white uppercase italic">FALLOW</h1>
           <p className="text-[#98a4bb] font-medium mt-3 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-            Biological Renewal Engine v1.0
+            {session ? `Connected: ${session.user.email}` : "Biological Renewal Engine v1.0"}
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2">
-            <LogIn className="w-5 h-5 text-[#98a4bb]" /> SIGN IN
-          </button>
+          {session ? (
+            <button 
+              onClick={() => supabase.auth.signOut()}
+              className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+            >
+              <LogOut className="w-5 h-5 text-[#98a4bb]" /> SIGN OUT
+            </button>
+          ) : (
+            <button 
+              onClick={handleAuth}
+              className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-5 h-5 text-[#98a4bb]" /> {loading ? <Loader2 className="animate-spin" /> : "SIGN IN"}
+            </button>
+          )}
           <button className="flex-1 md:flex-none bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight">
             START FAST
           </button>
@@ -173,7 +222,7 @@ export default function Home() {
              </div>
 
              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => addMp(10)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all">
+                <button onClick={() => addMp(10)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all text-center">
                    <Brain className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
                    <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">No Late Snack</span>
                 </button>
@@ -181,11 +230,11 @@ export default function Home() {
                    <Zap className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
                    <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">Walk vs Lunch</span>
                 </button>
-                <button onClick={() => addMp(15)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all">
+                <button onClick={() => addMp(15)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all text-center">
                    <PlusCircle className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
                    <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">Refused Treat</span>
                 </button>
-                <button onClick={() => addMp(5)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all">
+                <button onClick={() => addMp(5)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all text-center">
                    <Droplets className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
                    <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">AM/PM Discipline</span>
                 </button>

@@ -180,6 +180,17 @@ export default function Home() {
   const currentH = elapsed + bonus;
   const currentPhase = PHASES.find(p => currentH >= p.start && currentH < p.end) || PHASES[PHASES.length-1];
 
+  // Dynamic fuel mix based on hours fasted
+  const fatPct = Math.min(95, Math.round(
+    currentH <= 4  ? 0 :
+    currentH <= 12 ? ((currentH - 4) / 8) * 15 :
+    currentH <= 18 ? 15 + ((currentH - 12) / 6) * 20 :
+    currentH <= 24 ? 35 + ((currentH - 18) / 6) * 25 :
+    currentH <= 48 ? 60 + ((currentH - 24) / 24) * 25 :
+    85 + ((currentH - 48) / 24) * 10
+  ));
+  const glycogenPct = 100 - fatPct;
+
   return (
     <div className="min-h-screen text-[#f4f7fb]">
       {/* START FAST TIME PICKER MODAL */}
@@ -325,19 +336,21 @@ export default function Home() {
                <h2 className="text-[0.65rem] uppercase tracking-widest text-[#98a4bb] font-black">Est. Fuel Mix</h2>
                <div className="h-10 bg-black/40 border border-white/10 rounded-2xl overflow-hidden flex p-1">
                   <motion.div 
-                    initial={{ width: "100%" }}
-                    animate={{ width: "80%" }}
+                    animate={{ width: `${glycogenPct}%` }}
+                    transition={{ duration: 1, ease: "easeInOut" }}
                     className="h-full bg-blue-500/40 rounded-xl border border-blue-400/20" 
                   />
-                  <motion.div 
-                    initial={{ width: "0%" }}
-                    animate={{ width: "20%" }}
-                    className="h-full bg-purple-500/40 rounded-xl border border-purple-400/20 ml-1" 
-                  />
+                  {fatPct > 0 && (
+                    <motion.div 
+                      animate={{ width: `${fatPct}%` }}
+                      transition={{ duration: 1, ease: "easeInOut" }}
+                      className="h-full bg-purple-500/40 rounded-xl border border-purple-400/20 ml-1" 
+                    />
+                  )}
                </div>
                <div className="flex justify-between text-[0.6rem] font-black uppercase tracking-tighter">
-                 <span className="text-blue-400">Glycogen: 80%</span>
-                 <span className="text-purple-400">Fat/Ketones: 20%</span>
+                 <span className="text-blue-400">Glycogen: {glycogenPct}%</span>
+                 <span className="text-purple-400">Fat/Ketones: {fatPct}%</span>
                </div>
             </div>
           </section>

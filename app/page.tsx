@@ -1073,7 +1073,7 @@ export default function Home() {
                               <div className="text-[0.6rem] font-black uppercase tracking-widest text-[#4b5563] mb-3">
                                 {state==='ready' ? '📋 Log your refeed — tap to select' : '👀 Preview your options'}
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              <div className="grid grid-cols-3 gap-2">
                                 {REFEED_FOODS.map(food => (
                                   <Tooltip key={food.label} content={
                                     <div>
@@ -1090,20 +1090,15 @@ export default function Home() {
                                   }>
                                     <button
                                       onClick={() => state==='ready' && logRefeed(food)}
-                                      className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all
+                                      className={`w-full flex flex-col items-center gap-1 p-2.5 rounded-2xl border transition-all text-center
                                         ${refeedLogged?.label===food.label ? QUALITY_COLORS[food.quality]+' scale-105 shadow-lg' :
                                           state==='ready' ? 'bg-white/5 border-white/10 hover:'+QUALITY_COLORS[food.quality]+' cursor-pointer' :
                                           'bg-white/[0.02] border-white/5 opacity-50 cursor-default'}`}>
-                                      <span className="text-2xl">{food.emoji}</span>
-                                      <div className="text-left">
-                                        <div className="text-[0.7rem] font-black text-white leading-tight">{food.label}</div>
-                                        <span className={`text-[0.55rem] font-black ${food.nextFastBonus.startsWith('+') ? 'text-green-400' : food.nextFastBonus==='+0h'?'text-cyan-400':'text-red-400'}`}>
-                                          {food.nextFastBonus} to next fast
-                                        </span>
-                                      </div>
-                                      <div className={`ml-auto text-xs font-black px-2 py-0.5 rounded-full border text-center ${food.quality==='excellent'?'text-green-400 border-green-500/30':food.quality==='good'?'text-cyan-400 border-cyan-500/30':food.quality==='fair'?'text-yellow-400 border-yellow-500/30':'text-red-400 border-red-500/30'}`}>
-                                        {food.quality.slice(0,1).toUpperCase()}
-                                      </div>
+                                      <span className="text-xl">{food.emoji}</span>
+                                      <span className="text-[0.5rem] font-black text-[#98a4bb] leading-tight">{food.label}</span>
+                                      <span className={`text-[0.5rem] font-black ${food.nextFastBonus.startsWith('+') ? 'text-green-400' : food.nextFastBonus==='+0h'?'text-cyan-400':'text-red-400'}`}>
+                                        {food.nextFastBonus}
+                                      </span>
                                     </button>
                                   </Tooltip>
                                 ))}

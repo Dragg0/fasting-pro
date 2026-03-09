@@ -38,6 +38,8 @@ export default function Home() {
   const [bonus, setBonus] = useState(0);
   const [mp, setMp] = useState(0);
   const [streak, setStreak] = useState(1);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [accelerantMinutes, setAccelerantMinutes] = useState(0);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -59,12 +61,22 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!startTime) return;
+    const interval = setInterval(() => {
+      const realH = Math.max(0, (new Date().getTime() - startTime.getTime()) / 36e5);
+      setElapsed(realH);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+
   const fetchUserData = async (userId: string) => {
-    // Basic fetch logic for when we have the table ready
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (data) {
       setMp(data.mind_points || 0);
       setStreak(data.streak || 0);
+      if (data.fast_start_time) setStartTime(new Date(data.fast_start_time));
+      if (data.accelerant_minutes) setBonus(data.accelerant_minutes / 60);
     }
   };
 
@@ -77,6 +89,54 @@ export default function Home() {
     });
     if (error) alert(error.message);
     else alert("Check your email for the magic login link!");
+  };
+
+  const importLegacyData = async () => {
+    const code = prompt("Paste your Gazelam Sync Code here (from the old app):");
+    if (!code) return;
+    
+    try {
+      const jsonStr = code.replace("GAZELAM_SYNC_PAYLOAD:", "");
+      const payload = JSON.parse(jsonStr);
+      
+      if (!session) {
+        alert("Please sign in first to import data to your account.");
+        return;
+      }
+
+      const updates = {
+        mind_points: payload.fastData?.mindPoints || 0,
+        fast_start_time: payload.start || null,
+        accelerant_minutes: payload.fastData?.accelerantMinutes || 0,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from('profiles').update(updates).eq('id', session.user.id);
+      
+      if (error) {
+        alert("Sync error: " + error.message);
+      } else {
+        alert("Import Successful! Reloading...");
+        fetchUserData(session.user.id);
+      }
+    } catch (e) {
+      alert("Invalid Sync Code. Make sure you copied the whole block.");
+    }
+  };
+
+  const startFast = async () => {
+    const now = new Date();
+    setStartTime(now);
+    setElapsed(0);
+    setBonus(0);
+    
+    if (session) {
+      await supabase.from('profiles').update({ 
+        fast_start_time: now.toISOString(),
+        accelerant_minutes: 0,
+        mind_points: 0 // Optional: reset points or keep? Let's reset for new fast.
+      }).eq('id', session.user.id);
+    }
   };
 
   const triggerScan = () => {
@@ -148,12 +208,20 @@ export default function Home() {
         </div>
         <div className="flex gap-3">
           {session ? (
-            <button 
-              onClick={() => supabase.auth.signOut()}
-              className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
-            >
-              <LogOut className="w-5 h-5 text-[#98a4bb]" /> SIGN OUT
-            </button>
+            <>
+              <button 
+                onClick={importLegacyData}
+                className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 text-xs"
+              >
+                <History className="w-4 h-4 text-[#98a4bb]" /> IMPORT
+              </button>
+              <button 
+                onClick={() => supabase.auth.signOut()}
+                className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-5 h-5 text-[#98a4bb]" /> SIGN OUT
+              </button>
+            </>
           ) : (
             <button 
               onClick={handleAuth}
@@ -162,7 +230,10 @@ export default function Home() {
               <LogIn className="w-5 h-5 text-[#98a4bb]" /> {loading ? <Loader2 className="animate-spin" /> : "SIGN IN"}
             </button>
           )}
-          <button className="flex-1 md:flex-none bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight">
+          <button 
+            onClick={startFast}
+            className="flex-1 md:flex-none bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight"
+          >
             START FAST
           </button>
         </div>

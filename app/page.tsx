@@ -177,9 +177,17 @@ export default function Home() {
                    <Brain className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
                    <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">No Late Snack</span>
                 </button>
+                <button onClick={() => addMp(20)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-cyan-500/20 hover:border-cyan-500/40 p-4 rounded-3xl transition-all text-center">
+                   <Zap className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+                   <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">Walk vs Lunch</span>
+                </button>
                 <button onClick={() => addMp(15)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all">
-                   <Zap className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
+                   <PlusCircle className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
                    <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">Refused Treat</span>
+                </button>
+                <button onClick={() => addMp(5)} className="group flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border border-purple-500/10 hover:border-purple-500/40 p-4 rounded-3xl transition-all">
+                   <Droplets className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
+                   <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">AM/PM Discipline</span>
                 </button>
              </div>
           </section>

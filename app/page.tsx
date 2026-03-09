@@ -103,10 +103,10 @@ export default function Home() {
       {/* HEADER */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 border-b border-white/5 pb-8">
         <div>
-          <h1 className="text-5xl md:text-6xl font-[900] tracking-tighter text-white">FASTING MAP<span className="text-cyan-400 ml-1">PRO</span></h1>
+          <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-white uppercase italic">FALLOW</h1>
           <p className="text-[#98a4bb] font-medium mt-3 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-            Biological Feedback Loop v2.0
+            Biological Renewal Engine v1.0
           </p>
         </div>
         <div className="flex gap-3">

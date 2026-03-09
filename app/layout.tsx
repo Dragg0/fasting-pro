@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Fasting Map Pro - Willpower & Metabolic Tracker",
-  description: "Accelerated fasting with behavioral mind points.",
+  title: "Fallow - Metabolic Renewal & Discipline",
+  description: "Let your body recover its fertility. A high-IQ approach to fasting and willpower.",
 };
 
 export default function RootLayout({

@@ -60,6 +60,8 @@ export default function Home() {
   const [badgesEarned, setBadgesEarned] = useState<string[]>([]);
   const [activityLog, setActivityLog] = useState<{emoji:string;label:string;minutes:number;bonusH:number;ts:string}[]>([]);
   const [activityCount, setActivityCount] = useState(0);
+  const [waterCount, setWaterCount] = useState(0);
+  const [electrolyteCount, setElectrolyteCount] = useState(0);
 
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -130,6 +132,8 @@ export default function Home() {
       if (data.activity_log) {
         try { setActivityLog(JSON.parse(data.activity_log)); } catch {}
       }
+      setWaterCount(data.water_count || 0);
+      setElectrolyteCount(data.electrolyte_count || 0);
       if (data.fast_start_time) {
         const st = new Date(data.fast_start_time);
         setStartTime(st);
@@ -201,6 +205,8 @@ export default function Home() {
     setBonus(0);
     setAccelerantMinutes(0);
     setActivityLog([]);
+    setWaterCount(0);
+    setElectrolyteCount(0);
     goalReachedRef.current = realH >= goalHours;
     setShowStartPicker(false);
     if (session) {
@@ -208,6 +214,8 @@ export default function Home() {
         fast_start_time: chosen.toISOString(),
         accelerant_minutes: 0,
         activity_log: '[]',
+        water_count: 0,
+        electrolyte_count: 0,
       }).eq('id', session.user.id);
     }
   };
@@ -242,6 +250,18 @@ export default function Home() {
         badges_earned: JSON.stringify(newBadges),
       }).eq('id', session.user.id);
     }
+  };
+
+  const logWater = async () => {
+    const newCount = waterCount + 1;
+    setWaterCount(newCount);
+    if (session) await supabase.from('profiles').update({ water_count: newCount }).eq('id', session.user.id);
+  };
+
+  const logElectrolyte = async () => {
+    const newCount = electrolyteCount + 1;
+    setElectrolyteCount(newCount);
+    if (session) await supabase.from('profiles').update({ electrolyte_count: newCount }).eq('id', session.user.id);
   };
 
   const triggerScan = () => {
@@ -570,6 +590,46 @@ export default function Home() {
                 <Droplets className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
                 <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">AM/PM Discipline</span>
               </button>
+            </div>
+          </section>
+
+          {/* HYDRATION */}
+          <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
+            <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4 flex items-center gap-2">
+              💧 Hydration
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {/* WATER */}
+              <div className="bg-black/30 border border-cyan-500/10 rounded-2xl p-4 flex flex-col items-center gap-2">
+                <div className="text-2xl">💧</div>
+                <div className="text-3xl font-black text-cyan-400">{waterCount}</div>
+                <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#4b5563]">glasses</div>
+                <button onClick={logWater}
+                  className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 font-black py-2 rounded-xl text-xs transition-all">
+                  + Water
+                </button>
+              </div>
+              {/* ELECTROLYTES */}
+              <div className="bg-black/30 border border-orange-500/10 rounded-2xl p-4 flex flex-col items-center gap-2">
+                <div className="text-2xl">⚡</div>
+                <div className="text-3xl font-black text-orange-400">{electrolyteCount}</div>
+                <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#4b5563]">servings</div>
+                <button onClick={logElectrolyte}
+                  className="w-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 font-black py-2 rounded-xl text-xs transition-all">
+                  + Electrolytes
+                </button>
+              </div>
+            </div>
+            {/* Water goal indicator */}
+            <div className="mt-3">
+              <div className="flex justify-between text-[0.55rem] font-black uppercase text-[#4b5563] mb-1">
+                <span>Daily Goal: 8 glasses</span>
+                <span className={waterCount >= 8 ? 'text-cyan-400' : ''}>{waterCount >= 8 ? '✓ DONE' : `${8 - waterCount} to go`}</span>
+              </div>
+              <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                <motion.div animate={{ width: `${Math.min(100, (waterCount / 8) * 100)}%` }} transition={{ duration: 0.5 }}
+                  className="h-full bg-cyan-500 rounded-full" />
+              </div>
             </div>
           </section>
 

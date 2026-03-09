@@ -11,15 +11,44 @@ import { supabase } from "@/lib/supabase";
 // ─── TOOLTIP ────────────────────────────────────────────────────────────────
 function Tooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
   const [show, setShow] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const updatePos = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPos({
+        top: rect.top + window.scrollY - 12,
+        left: rect.left + window.scrollX + rect.width / 2,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (show) {
+      updatePos();
+      window.addEventListener('scroll', updatePos);
+      window.addEventListener('resize', updatePos);
+      return () => {
+        window.removeEventListener('scroll', updatePos);
+        window.removeEventListener('resize', updatePos);
+      };
+    }
+  }, [show]);
+
   return (
-    <div className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
+    <div ref={triggerRef} className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
       onClick={() => setShow(s => !s)}>
       {children}
       <AnimatePresence>
         {show && (
-          <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.95 }} transition={{ duration: 0.15 }}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 z-[300] shadow-2xl shadow-black/60 pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            style={{ top: pos.top, left: pos.left, transform: 'translateX(-50%) translateY(-100%)' }}
+            className="fixed w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 z-[500] shadow-2xl shadow-black/60 pointer-events-none">
             <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
           </motion.div>

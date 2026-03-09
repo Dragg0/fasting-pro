@@ -198,41 +198,45 @@ export default function Home() {
       </AnimatePresence>
 
       {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10 border-b border-white/5 pb-8">
-        <div>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 border-b border-white/5 pb-8">
+        <div className="flex-1 min-w-0">
           <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-white uppercase italic">FALLOW</h1>
-          <p className="text-[#98a4bb] font-medium mt-3 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-            {session ? `Connected: ${session.user.email}` : "Biological Renewal Engine v1.0"}
+          <p className="text-[#98a4bb] font-medium mt-3 flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="w-2 h-2 shrink-0 rounded-full bg-cyan-500 animate-pulse" />
+            {session ? (
+              <span className="truncate">Active: <span className="text-cyan-400 font-bold">{session.user.email}</span></span>
+            ) : (
+              "Metabolic Renewal Engine v1.0"
+            )}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
           {session ? (
             <>
               <button 
                 onClick={importLegacyData}
-                className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 text-xs"
+                className="bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-4 py-3 rounded-2xl font-bold transition-all flex items-center gap-2 text-xs text-[#98a4bb]"
               >
-                <History className="w-4 h-4 text-[#98a4bb]" /> IMPORT
+                <History className="w-4 h-4" /> IMPORT
               </button>
               <button 
                 onClick={() => supabase.auth.signOut()}
-                className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+                className="bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-4 py-3 rounded-2xl font-bold transition-all flex items-center gap-2 text-xs text-red-400"
               >
-                <LogOut className="w-5 h-5 text-[#98a4bb]" /> SIGN OUT
+                <LogOut className="w-4 h-4" /> SIGN OUT
               </button>
             </>
           ) : (
             <button 
               onClick={handleAuth}
-              className="flex-1 md:flex-none bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+              className="bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center gap-2 text-white"
             >
-              <LogIn className="w-5 h-5 text-[#98a4bb]" /> {loading ? <Loader2 className="animate-spin" /> : "SIGN IN"}
+              <LogIn className="w-5 h-5 text-cyan-400" /> {loading ? <Loader2 className="animate-spin" /> : "SIGN IN"}
             </button>
           )}
           <button 
             onClick={startFast}
-            className="flex-1 md:flex-none bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight"
+            className="bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight uppercase"
           >
             START FAST
           </button>

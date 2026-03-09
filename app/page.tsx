@@ -1090,15 +1090,17 @@ export default function Home() {
                                   }>
                                     <button
                                       onClick={() => state==='ready' && logRefeed(food)}
-                                      className={`w-full flex flex-col items-center gap-1 p-2.5 rounded-2xl border transition-all text-center
-                                        ${refeedLogged?.label===food.label ? QUALITY_COLORS[food.quality]+' scale-105 shadow-lg' :
+                                      className={`w-full p-2.5 rounded-2xl border transition-all text-center
+                                        ${refeedLogged?.label===food.label ? QUALITY_COLORS[food.quality] :
                                           state==='ready' ? 'bg-white/5 border-white/10 hover:'+QUALITY_COLORS[food.quality]+' cursor-pointer' :
                                           'bg-white/[0.02] border-white/5 opacity-50 cursor-default'}`}>
-                                      <span className="text-xl">{food.emoji}</span>
-                                      <span className="text-[0.5rem] font-black text-[#98a4bb] leading-tight">{food.label}</span>
-                                      <span className={`text-[0.5rem] font-black ${food.nextFastBonus.startsWith('+') ? 'text-green-400' : food.nextFastBonus==='+0h'?'text-cyan-400':'text-red-400'}`}>
-                                        {food.nextFastBonus}
-                                      </span>
+                                      <div className={`transition-transform ${refeedLogged?.label===food.label ? 'scale-105' : ''}`}>
+                                        <div className="text-xl">{food.emoji}</div>
+                                        <div className="text-[0.5rem] font-black text-[#98a4bb] leading-tight">{food.label}</div>
+                                        <div className={`text-[0.5rem] font-black ${food.nextFastBonus.startsWith('+') ? 'text-green-400' : food.nextFastBonus==='+0h'?'text-cyan-400':'text-red-400'}`}>
+                                          {food.nextFastBonus}
+                                        </div>
+                                      </div>
                                     </button>
                                   </Tooltip>
                                 ))}

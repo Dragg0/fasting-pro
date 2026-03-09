@@ -46,6 +46,7 @@ export default function Home() {
   const [pickerValue, setPickerValue] = useState("");
   const [showWalkModal, setShowWalkModal] = useState(false);
   const [walkMinutes, setWalkMinutes] = useState(30);
+  const [activityLog, setActivityLog] = useState<{emoji: string; label: string; minutes: number; bonusH: number; ts: string}[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -82,6 +83,9 @@ export default function Home() {
       const accMin = data.accelerant_minutes || 0;
       const accHours = accMin / 60;
       if (data.accelerant_minutes) setBonus(accHours);
+      if (data.activity_log) {
+        try { setActivityLog(JSON.parse(data.activity_log)); } catch {}
+      }
       if (data.fast_start_time) {
         const st = new Date(data.fast_start_time);
         setStartTime(st);
@@ -169,19 +173,22 @@ export default function Home() {
   };
 
   const confirmWalk = async () => {
-    // Walk accelerant: 2 min of fasting per 1 min of walking (30min walk = 1h bonus)
     const accelMinutes = walkMinutes * 2;
     const accelHours = accelMinutes / 60;
     const newBonus = bonus + accelHours;
-    const newAccelTotal = (accelerantMinutes + accelMinutes);
+    const newAccelTotal = accelerantMinutes + accelMinutes;
+    const entry = { emoji: "🚶", label: "Walk", minutes: walkMinutes, bonusH: accelHours, ts: new Date().toISOString() };
+    const newLog = [entry, ...activityLog];
     setBonus(newBonus);
     setAccelerantMinutes(newAccelTotal);
+    setActivityLog(newLog);
     setShowWalkModal(false);
     triggerScan();
 
     if (session) {
       await supabase.from('profiles').update({ 
-        accelerant_minutes: newAccelTotal 
+        accelerant_minutes: newAccelTotal,
+        activity_log: JSON.stringify(newLog),
       }).eq('id', session.user.id);
     }
   };
@@ -486,6 +493,31 @@ export default function Home() {
                 </button>
              </div>
           </section>
+
+          {/* ACTIVITY LOG */}
+          {activityLog.length > 0 && (
+            <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
+              <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4 flex items-center gap-2">
+                <Zap className="w-3 h-3 text-cyan-500" /> Activity Log
+              </h2>
+              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                {activityLog.map((entry, i) => (
+                  <div key={i} className="flex items-center justify-between bg-black/30 rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{entry.emoji}</span>
+                      <div>
+                        <div className="text-[0.65rem] font-black text-white">{entry.label} — {entry.minutes}min</div>
+                        <div className="text-[0.6rem] text-[#4b5563]">
+                          {new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-cyan-400 font-black text-xs">+{entry.bonusH.toFixed(2)}h</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* CENTER COLUMN: METABOLIC MAP */}

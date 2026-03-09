@@ -42,6 +42,8 @@ export default function Home() {
   const [accelerantMinutes, setAccelerantMinutes] = useState(0);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [pickerValue, setPickerValue] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -75,8 +77,16 @@ export default function Home() {
     if (data) {
       setMp(data.mind_points || 0);
       setStreak(data.streak || 0);
-      if (data.fast_start_time) setStartTime(new Date(data.fast_start_time));
-      if (data.accelerant_minutes) setBonus(data.accelerant_minutes / 60);
+      const accMin = data.accelerant_minutes || 0;
+      const accHours = accMin / 60;
+      if (data.accelerant_minutes) setBonus(accHours);
+      if (data.fast_start_time) {
+        const st = new Date(data.fast_start_time);
+        setStartTime(st);
+        // Calculate elapsed immediately — don't wait for interval
+        const realH = Math.max(0, (new Date().getTime() - st.getTime()) / 36e5);
+        setElapsed(realH);
+      }
     }
   };
 
@@ -124,17 +134,29 @@ export default function Home() {
     }
   };
 
-  const startFast = async () => {
+  const openStartPicker = () => {
+    // Default picker to current local time in datetime-local format
     const now = new Date();
-    setStartTime(now);
-    setElapsed(0);
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    setPickerValue(local);
+    setShowStartPicker(true);
+  };
+
+  const confirmStartFast = async () => {
+    if (!pickerValue) return;
+    const chosen = new Date(pickerValue);
+    setStartTime(chosen);
+    const realH = Math.max(0, (new Date().getTime() - chosen.getTime()) / 36e5);
+    setElapsed(realH);
     setBonus(0);
-    
+    setShowStartPicker(false);
+
     if (session) {
       await supabase.from('profiles').update({ 
-        fast_start_time: now.toISOString(),
+        fast_start_time: chosen.toISOString(),
         accelerant_minutes: 0,
-        mind_points: 0 // Optional: reset points or keep? Let's reset for new fast.
       }).eq('id', session.user.id);
     }
   };
@@ -160,6 +182,46 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-[#f4f7fb]">
+      {/* START FAST TIME PICKER MODAL */}
+      <AnimatePresence>
+        {showStartPicker && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowStartPicker(false)}
+              className="fixed inset-0 bg-black/80 z-[100] backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-[#0f131c] border-2 border-cyan-500/30 rounded-[2.5rem] p-8 z-[101] shadow-2xl"
+            >
+              <h2 className="text-2xl font-black text-white mb-2 tracking-tighter">When did you start?</h2>
+              <p className="text-[#98a4bb] text-sm mb-6">Set the actual time your fast began — even if you forgot to log it.</p>
+              <input
+                type="datetime-local"
+                value={pickerValue}
+                onChange={e => setPickerValue(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 text-white rounded-2xl px-4 py-3 mb-6 focus:outline-none focus:border-cyan-500/50 text-sm"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowStartPicker(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl transition-all"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={confirmStartFast}
+                  className="flex-1 bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  START FAST
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* OVERLAYS */}
       <AnimatePresence>
         {selectedPhase && (
@@ -235,7 +297,7 @@ export default function Home() {
             </button>
           )}
           <button 
-            onClick={startFast}
+            onClick={openStartPicker}
             className="bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight uppercase"
           >
             START FAST

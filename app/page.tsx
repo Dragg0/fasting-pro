@@ -4,7 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Brain, History, LogIn, TrendingUp, PlusCircle, CheckCircle2,
-  Flame, Zap, Droplets, Info, Clock, LogOut, Loader2, Trophy, Target, Scale, UtensilsCrossed, ChevronDown
+  Flame, Zap, Droplets, Info, Clock, LogOut, Loader2, Trophy, Target, Scale, UtensilsCrossed, ChevronDown,
+  Footprints, Moon, ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
@@ -397,10 +398,12 @@ const getRefeedGuidance = (hours: number) => {
 };
 
 const MP_ACTIONS = [
-  { icon: Brain,    color: 'purple', points: 10, label: 'No Late Snack',    science: 'Late-night eating disrupts circadian insulin rhythms. A strict 10pm cutoff extends your overnight fast by 1-2h and improves morning cortisol response, boosting fat mobilization.' },
-  { icon: Zap,      color: 'cyan',   points: 20, label: 'Walk vs Lunch',    science: 'Walking instead of eating during lunch keeps insulin suppressed, maintains ketone production, and activates GLUT4 in muscles. Studies show a 20-min walk reduces post-meal glucose by 30%.' },
-  { icon: PlusCircle, color: 'purple', points: 15, label: 'Refused Treat', science: 'Each successful act of food refusal strengthens the prefrontal cortex\'s inhibitory control pathways. You are literally rewiring your brain toward discipline with every "no".' },
-  { icon: Droplets, color: 'purple', points: 5,  label: 'AM/PM Discipline',science: 'Morning cortisol (peaks 8-9am) naturally mobilizes fat stores. Fasting during this window amplifies the effect. Evening discipline prevents the insulin spike that shuts down overnight fat burning.' },
+  { icon: Footprints, color: 'cyan',   points: 20, label: 'Walked Off a Craving', science: 'Walking for 10-15 minutes suppresses ghrelin (hunger hormone) and raises GLP-1 and peptide YY (satiety hormones). This "exercise-induced anorexia" effect lasts 1-2 hours. Any exercise works the same way — running, cycling, even stretching — but walking is the easiest to do in the moment.' },
+  { icon: Zap,        color: 'cyan',   points: 15, label: 'Post-Meal Walk',       science: 'A 10-15 minute walk after eating reduces your glucose spike by 30-50%, keeping insulin lower and shortening the time to return to fat-burning. Any moderate movement works, but walking is ideal — low enough intensity that it doesn\'t divert blood away from digestion.' },
+  { icon: ShieldCheck,color: 'purple', points: 15, label: 'Refused a Treat',      science: 'Each successful act of food refusal strengthens the prefrontal cortex\'s inhibitory control pathways. You are literally rewiring your brain toward discipline with every "no". fMRI studies show this region grows measurably denser with repeated self-control.' },
+  { icon: Brain,      color: 'purple', points: 10, label: 'No Late Snack',        science: 'Late-night eating disrupts circadian insulin rhythms. Eating after 9-10pm keeps insulin elevated during the window your body should be in deep fat-burning mode. A strict cutoff extends your overnight fast by 1-2h and improves morning cortisol response.' },
+  { icon: Droplets,   color: 'cyan',   points: 10, label: 'Water Over Snack',     science: 'Mild dehydration mimics hunger signals — the hypothalamus processes both thirst and hunger, and often confuses them. Studies show that drinking water before a meal reduces calorie intake by 13%. Next time you feel a craving, drink a glass and wait 15 minutes.' },
+  { icon: Moon,       color: 'purple', points: 15, label: 'Slept 7+ Hours',       science: 'One night of poor sleep (<6h) raises ghrelin by 28% and drops leptin by 18% — making you hungrier and less satisfied the next day. Sleep is the invisible multiplier behind every other discipline habit. Protect it.' },
 ];
 
 export default function Home() {

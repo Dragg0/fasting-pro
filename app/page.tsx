@@ -67,15 +67,15 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
         isMobile ? (
           <>
             <div className="fixed inset-0 z-[2147483646] bg-black/60 backdrop-blur-sm" onClick={() => setShow(false)} />
-            <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[2147483647]">
-              <div className="relative rounded-3xl border border-cyan-500/25 bg-[#0c1018] p-5 shadow-2xl shadow-black/70">
+            <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[2147483647] flex justify-center">
+              <div className="relative w-full max-w-sm rounded-3xl border border-cyan-500/25 bg-[#0c1018] p-5 shadow-2xl shadow-black/70 max-h-[75vh] overflow-y-auto">
                 <button
                   onClick={() => setShow(false)}
                   className="absolute right-3 top-3 text-sm font-black text-[#98a4bb] hover:text-white"
                 >
                   ✕
                 </button>
-                <div className="pr-6 text-sm text-[#c8d4e8] leading-relaxed">{content}</div>
+                <div className="pr-6 text-sm text-[#c8d4e8] leading-relaxed break-words">{content}</div>
               </div>
             </div>
           </>
@@ -131,7 +131,7 @@ function Sparkline({ data }: { data: number[] }) {
 }
 
 // ─── CALENDAR ───────────────────────────────────────────────────────────────
-function FastingCalendar({ history }: { history: any[] }) {
+function FastingCalendar({ history, activityLog }: { history: any[]; activityLog: {emoji:string;label:string;minutes:number;bonusH:number;ts:string}[] }) {
   const [viewDate, setViewDate] = useState(new Date());
   const month = viewDate.getMonth();
   const year = viewDate.getFullYear();
@@ -143,6 +143,24 @@ function FastingCalendar({ history }: { history: any[] }) {
     acc[d] = f;
     return acc;
   }, {} as any);
+
+  const activityMap = activityLog.reduce((acc, a) => {
+    const d = new Date(a.ts).toLocaleDateString('en-CA');
+    if (!acc[d]) acc[d] = [];
+    acc[d].push(a);
+    return acc;
+  }, {} as Record<string, {emoji:string;label:string;minutes:number;bonusH:number;ts:string}[]>);
+
+  const getActivityDots = (dateStr: string) => {
+    const acts = activityMap[dateStr] || [];
+    const labels = new Set(acts.map(a => a.label));
+    const dots: { key: string; color: string }[] = [];
+    if (labels.has('Walk')) dots.push({ key: 'walk', color: 'bg-green-400' });
+    if (labels.has('Run')) dots.push({ key: 'run', color: 'bg-red-400' });
+    if (labels.has('Pickleball')) dots.push({ key: 'pickleball', color: 'bg-yellow-400' });
+    if (labels.has('Lift')) dots.push({ key: 'lift', color: 'bg-cyan-400' });
+    return dots.slice(0, 4);
+  };
 
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
   const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
@@ -175,26 +193,51 @@ function FastingCalendar({ history }: { history: any[] }) {
         {days.map(d => {
           const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const fast = fastMap[dateStr];
+          const activityDots = getActivityDots(dateStr);
+          const dayActivities = activityMap[dateStr] || [];
           return (
-            <Tooltip key={d} content={fast ? (
+            <Tooltip key={d} content={fast || dayActivities.length ? (
               <div>
-                <div className="font-black text-white mb-1">{fast.hours}h Fast</div>
-                <div className="text-[0.6rem] text-cyan-400 font-bold mb-2">Logged {new Date(fast.end).toLocaleTimeString()}</div>
-                {fast.refeed?.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {fast.refeed.map((f:any, i:number) => <span key={i} className="text-[0.5rem] bg-white/5 px-1.5 py-0.5 rounded-full">{f.emoji} {f.label}</span>)}
+                {fast && (
+                  <>
+                    <div className="font-black text-white mb-1">{fast.hours}h Fast</div>
+                    <div className="text-[0.6rem] text-cyan-400 font-bold mb-2">Logged {new Date(fast.end).toLocaleTimeString()}</div>
+                    {fast.refeed?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {fast.refeed.map((f:any, i:number) => <span key={i} className="text-[0.5rem] bg-white/5 px-1.5 py-0.5 rounded-full">{f.emoji} {f.label}</span>)}
+                      </div>
+                    )}
+                  </>
+                )}
+                {dayActivities.length > 0 && (
+                  <div>
+                    <div className="font-black text-white mb-1 text-[0.7rem] uppercase tracking-wide">Activities</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dayActivities.map((a, i) => (
+                        <span key={i} className="text-[0.5rem] bg-white/5 px-1.5 py-0.5 rounded-full">{a.emoji} {a.label}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-            ) : null}>
-              <div className={`aspect-square flex items-center justify-center text-[0.65rem] font-bold rounded-lg border transition-all ${
+            ) : (
+              <div className="text-[0.65rem] text-[#98a4bb]">No fast or activity logged</div>
+            )}>
+              <div className={`aspect-square flex flex-col items-center justify-center text-[0.65rem] font-bold rounded-lg border transition-all ${
                 fast ? (
                   fast.hours >= 24 ? 'bg-purple-500/20 border-purple-500/40 text-purple-200' :
                   fast.hours >= 18 ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-200' :
                   'bg-green-500/20 border-green-500/40 text-green-200'
                 ) : 'bg-black/20 border-transparent text-[#4b5563]'
               }`}>
-                {d}
+                <span>{d}</span>
+                {activityDots.length > 0 && (
+                  <div className="mt-1 flex items-center gap-1">
+                    {activityDots.map(dot => (
+                      <span key={dot.key} className={`w-1.5 h-1.5 rounded-full ${dot.color}`} />
+                    ))}
+                  </div>
+                )}
               </div>
             </Tooltip>
           );
@@ -1013,7 +1056,14 @@ export default function Home() {
 
           {/* ACCELERANTS */}
           <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
-            <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4">Accelerants</h2>
+            <Tooltip content={
+              <div>
+                <div className="font-black text-cyan-400 mb-1">⚡ Accelerants</div>
+                <p>Accelerants simulate how movement speeds up fasting biology. Activities like walking, running, pickleball, and lifting burn glycogen faster and push you toward fat-burning and ketosis sooner.</p>
+              </div>
+            }>
+              <h2 className="inline-flex items-center gap-1 text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4 cursor-help">Accelerants <Info className="w-3 h-3 opacity-40" /></h2>
+            </Tooltip>
             <div className="grid grid-cols-2 gap-3">
               {ACTIVITIES.map(act => (
                 <Tooltip key={act.label} content={
@@ -1100,7 +1150,7 @@ export default function Home() {
             <AnimatePresence mode="wait">
               {historyView === 'calendar' ? (
                 <motion.div key="calendar" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                  <FastingCalendar history={fastHistory} />
+                  <FastingCalendar history={fastHistory} activityLog={activityLog} />
                 </motion.div>
               ) : (
                 <motion.div key="list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}

@@ -904,7 +904,9 @@ export default function Home() {
 
   if (!mounted) return null;
 
-  const currentH = elapsed + bonus;
+  const [devHours, setDevHours] = useState(24);
+  const realH = elapsed + bonus;
+  const currentH = devMode ? devHours : realH;
   const currentPhase = PHASES.find(p => currentH >= p.start && currentH < p.end) || PHASES[PHASES.length - 1];
   const goalProgress = Math.min(100, (currentH / goalHours) * 100);
   const fatPct = Math.min(95, Math.round(
@@ -1599,9 +1601,16 @@ export default function Home() {
                 Metabolic Anatomy <span className="text-cyan-500 ml-2">LIVE</span>
               </h2>
               <div className="text-[0.55rem] font-black uppercase tracking-widest text-cyan-400/80">
-                {startTime ? currentPhase.short : ''}
+                {(startTime || devMode) ? currentPhase.short : ''}
               </div>
             </div>
+            {devMode && (
+              <div className="w-full z-10 mb-4 flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-2">
+                <span className="text-[0.5rem] font-black uppercase tracking-widest text-purple-400 whitespace-nowrap">DEV {devHours}h</span>
+                <input type="range" min={0} max={72} step={0.5} value={devHours} onChange={e => setDevHours(Number(e.target.value))}
+                  className="flex-1 h-1 accent-purple-500 cursor-pointer" />
+              </div>
+            )}
             <div className="relative w-full max-w-[400px] flex justify-center py-6 z-10">
               <img src="/body.png" alt="Anatomy" className="w-full opacity-80 mix-blend-lighten" />
 
@@ -1616,7 +1625,7 @@ export default function Home() {
 
               {/* ── BRAIN ── ketone-fueled (18h+), brightness scales with MP */}
               {(() => {
-                const brainActive = startTime && currentH > 18;
+                const brainActive = (startTime || devMode) && currentH > 18;
                 const mpGlow = Math.min(1, mp / 200); // scales 0→1 over 200 MP
                 const brainOpacity = brainActive ? 0.4 + mpGlow * 0.5 : mpGlow > 0.1 ? mpGlow * 0.25 : 0;
                 const brainBlur = brainActive ? 'blur-xl' : 'blur-lg';
@@ -1631,7 +1640,7 @@ export default function Home() {
               })()}
 
               {/* ── STOMACH ── digesting (0-4h), fades as digestion ends */}
-              {startTime && currentH < 6 && (
+              {(startTime || devMode) && currentH < 6 && (
                 <motion.div
                   animate={{ opacity: [Math.max(0.1, 0.5 - currentH * 0.1), Math.max(0.15, 0.6 - currentH * 0.1)], scale: [0.97, 1.03, 0.97] }}
                   transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -1640,7 +1649,7 @@ export default function Home() {
               )}
 
               {/* ── LIVER ── glycogen depletion (2-18h), peak at 8-12h */}
-              {startTime && currentH > 2 && currentH < 24 && (() => {
+              {(startTime || devMode) && currentH > 2 && currentH < 24 && (() => {
                 const liverIntensity = currentH < 8 ? (currentH - 2) / 6 : currentH < 18 ? 1 : Math.max(0, 1 - (currentH - 18) / 6);
                 return (
                   <motion.div
@@ -1652,7 +1661,7 @@ export default function Home() {
               })()}
 
               {/* ── FAT / WAIST ── fat mobilization (12h+), intensifies over time */}
-              {startTime && currentH > 10 && (() => {
+              {(startTime || devMode) && currentH > 10 && (() => {
                 const fatIntensity = Math.min(1, (currentH - 10) / 14);
                 return (
                   <motion.div
@@ -1664,7 +1673,7 @@ export default function Home() {
               })()}
 
               {/* ── HEART ── deep ketosis fuel (24h+) */}
-              {startTime && currentH > 20 && (() => {
+              {(startTime || devMode) && currentH > 20 && (() => {
                 const heartIntensity = Math.min(1, (currentH - 20) / 8);
                 return (
                   <motion.div
@@ -1676,7 +1685,7 @@ export default function Home() {
               })()}
 
               {/* ── ORGAN LABELS ── show which organs are active */}
-              {startTime && (
+              {(startTime || devMode) && (
                 <>
                   <div className="absolute top-[8%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
                     {currentH > 18 && (
@@ -1714,7 +1723,7 @@ export default function Home() {
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-2"
                 >
-                  {startTime ? (
+                  {(startTime || devMode) ? (
                     <>
                       <div className="text-[0.55rem] font-black uppercase tracking-widest text-white">{currentPhase.title}</div>
                       <div className="text-[0.45rem] font-bold text-cyan-400">{currentPhase.fuel}</div>

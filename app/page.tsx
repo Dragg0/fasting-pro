@@ -47,8 +47,14 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            style={{ top: pos.top, left: pos.left, transform: 'translateX(-50%) translateY(-100%)' }}
-            className="fixed w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 z-[500] shadow-2xl shadow-black/60 pointer-events-none">
+            style={{ 
+              position: 'fixed',
+              top: pos.top, 
+              left: pos.left, 
+              transform: 'translateX(-50%) translateY(-100%)',
+              zIndex: 9999 
+            }}
+            className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60 pointer-events-none">
             <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
           </motion.div>
@@ -777,7 +783,7 @@ export default function Home() {
         <div className="lg:col-span-3 space-y-6">
 
           {/* TIMER CARD */}
-          <section className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-md">
+          <section className="bg-white/[0.04] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl">
             <h2 className="text-[0.65rem] uppercase tracking-[0.2em] text-[#98a4bb] font-black mb-6 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-cyan-400" /> Live Fasting State
             </h2>

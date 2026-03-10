@@ -1701,51 +1701,45 @@ export default function Home() {
                 );
               })()}
 
-              {/* ── FAT ── fat mobilization (12h+), particles radiate from hips/butt */}
+              {/* ── FAT ── fat mobilization (12h+), particles drift down from hips/butt */}
               {(startTime || devMode) && currentH > 10 && (() => {
                 const fatIntensity = Math.min(1, (currentH - 10) / 14);
                 const lateBoost = currentH > 24 ? Math.min(1, (currentH - 24) / 24) : 0;
                 const totalFat = Math.min(1, fatIntensity + lateBoost * 0.4);
-                // Origins: hips, butt, love handles — fat leaves from where it's stored
+                // Origins moved lower — hips/butt/love handles, all travel downward within body
                 const origins = [
-                  { t: 48, l: 36, label: 'left-hip' },   // left hip
-                  { t: 48, l: 64, label: 'right-hip' },  // right hip
-                  { t: 52, l: 44, label: 'left-glute' }, // left glute
-                  { t: 52, l: 56, label: 'right-glute' },// right glute
-                  { t: 46, l: 34, label: 'left-love' },  // left love handle
-                  { t: 46, l: 66, label: 'right-love' }, // right love handle
+                  { t: 52, l: 42, dx: -3,  dy: 25 },  // left hip → down-slightly-in
+                  { t: 52, l: 57, dx: 3,   dy: 25 },  // right hip → down-slightly-in
+                  { t: 54, l: 45, dx: -5,  dy: 30 },  // left glute → down inner thigh
+                  { t: 54, l: 54, dx: 5,   dy: 30 },  // right glute → down inner thigh
+                  { t: 50, l: 40, dx: -2,  dy: 20 },  // left love handle → down
+                  { t: 50, l: 59, dx: 2,   dy: 20 },  // right love handle → down
                 ];
                 const particlesPerOrigin = currentH > 36 ? 4 : currentH > 24 ? 3 : 2;
                 return (
                   <>
-                    {/* Subtle hip/waist glow — keeps it visually grounded */}
+                    {/* Subtle hip glow — lower, at the belt line */}
                     <motion.div
                       animate={{ opacity: [totalFat * 0.15, totalFat * 0.35, totalFat * 0.15], scale: [0.97, 1.04, 0.97] }}
                       transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute top-[46%] left-1/2 -translate-x-1/2 w-24 h-10 bg-orange-500 blur-2xl rounded-full pointer-events-none"
+                      className="absolute top-[50%] left-1/2 -translate-x-1/2 w-20 h-8 bg-orange-500 blur-2xl rounded-full pointer-events-none"
                     />
-                    {/* Fat particles radiating outward from each origin */}
-                    {origins.map((origin, oi) => {
-                      const isLeft = origin.l < 50;
-                      return Array.from({ length: particlesPerOrigin }, (_, pi) => {
-                        const angle = isLeft ? -30 - pi * 20 : 30 + pi * 20; // spray outward
-                        const rad = (angle * Math.PI) / 180;
-                        const dist = 30 + pi * 15;
-                        return (
-                          <motion.div key={`fp-${oi}-${pi}`}
-                            animate={{
-                              opacity: [0, totalFat * 0.7, 0],
-                              x: [0, Math.cos(rad) * dist],
-                              y: [0, Math.sin(rad) * dist],
-                              scale: [1, 0.3],
-                            }}
-                            transition={{ duration: 2 + pi * 0.4, repeat: Infinity, delay: oi * 0.25 + pi * 0.3, ease: 'easeOut' }}
-                            className="absolute w-1.5 h-1.5 bg-orange-400 rounded-full pointer-events-none"
-                            style={{ top: `${origin.t}%`, left: `${origin.l}%`, filter: 'blur(0.5px)', boxShadow: '0 0 3px rgba(251,146,60,0.5)' }}
-                          />
-                        );
-                      });
-                    })}
+                    {/* Fat particles drifting downward from each origin — stays within body */}
+                    {origins.map((origin, oi) =>
+                      Array.from({ length: particlesPerOrigin }, (_, pi) => (
+                        <motion.div key={`fp-${oi}-${pi}`}
+                          animate={{
+                            opacity: [0, totalFat * 0.7, 0],
+                            x: [0, origin.dx + (pi % 2 === 0 ? -2 : 2)],
+                            y: [0, origin.dy + pi * 8],
+                            scale: [1, 0.3],
+                          }}
+                          transition={{ duration: 2.2 + pi * 0.4, repeat: Infinity, delay: oi * 0.25 + pi * 0.35, ease: 'easeOut' }}
+                          className="absolute w-1.5 h-1.5 bg-orange-400 rounded-full pointer-events-none"
+                          style={{ top: `${origin.t}%`, left: `${origin.l}%`, filter: 'blur(0.5px)', boxShadow: '0 0 3px rgba(251,146,60,0.5)' }}
+                        />
+                      ))
+                    )}
                     {/* Thigh glow — appears at 16h+ */}
                     {currentH > 16 && (() => {
                       const thighIntensity = Math.min(1, (currentH - 16) / 20);
@@ -1754,12 +1748,12 @@ export default function Home() {
                           <motion.div
                             animate={{ opacity: [thighIntensity * 0.1, thighIntensity * 0.3, thighIntensity * 0.1], scale: [0.96, 1.06, 0.96] }}
                             transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-                            className="absolute top-[58%] left-[40%] -translate-x-1/2 w-10 h-14 bg-orange-500 blur-2xl rounded-full pointer-events-none"
+                            className="absolute top-[60%] left-[42%] -translate-x-1/2 w-8 h-12 bg-orange-500 blur-2xl rounded-full pointer-events-none"
                           />
                           <motion.div
                             animate={{ opacity: [thighIntensity * 0.1, thighIntensity * 0.3, thighIntensity * 0.1], scale: [0.96, 1.06, 0.96] }}
                             transition={{ duration: 3.5, repeat: Infinity, delay: 0.5, ease: 'easeInOut' }}
-                            className="absolute top-[58%] left-[60%] -translate-x-1/2 w-10 h-14 bg-orange-500 blur-2xl rounded-full pointer-events-none"
+                            className="absolute top-[60%] left-[58%] -translate-x-1/2 w-8 h-12 bg-orange-500 blur-2xl rounded-full pointer-events-none"
                           />
                         </>
                       );
@@ -1773,24 +1767,24 @@ export default function Home() {
                 const heartIntensity = Math.min(1, (currentH - 20) / 8);
                 return (
                   <>
-                    {/* Core heartbeat glow — small and tight */}
+                    {/* Core heartbeat glow */}
                     <motion.div
                       animate={{ opacity: [heartIntensity * 0.35, heartIntensity * 0.75, heartIntensity * 0.35], scale: [0.92, 1.12, 0.92] }}
                       transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute top-[26%] left-[49%] -translate-x-1/2 w-7 h-7 bg-red-500 blur-lg rounded-full pointer-events-none"
+                      className="absolute top-[28%] left-[49%] -translate-x-1/2 w-9 h-9 bg-red-500 blur-lg rounded-full pointer-events-none"
                     />
-                    {/* Heartbeat pulse ring — smaller */}
+                    {/* Heartbeat pulse ring */}
                     <motion.div
                       animate={{ opacity: [0, heartIntensity * 0.25, 0], scale: [0.8, 1.3, 0.8] }}
                       transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute top-[25.5%] left-[49%] -translate-x-1/2 w-10 h-10 border border-red-400/30 rounded-full pointer-events-none"
+                      className="absolute top-[27.5%] left-[49%] -translate-x-1/2 w-12 h-12 border border-red-400/30 rounded-full pointer-events-none"
                     />
                     {/* Blood flow particles */}
                     {heartIntensity > 0.3 && [0,1,2].map(i => (
                       <motion.div key={`hb-${i}`}
                         animate={{ opacity: [0, heartIntensity * 0.5, 0], y: [0, 20 + i * 8], scale: [1, 0.4] }}
                         transition={{ duration: 1.3 + i * 0.3, repeat: Infinity, delay: i * 0.35, ease: 'easeOut' }}
-                        className="absolute top-[28%] left-[48%] w-1 h-1 bg-red-300 rounded-full pointer-events-none"
+                        className="absolute top-[30%] left-[48%] w-1 h-1 bg-red-300 rounded-full pointer-events-none"
                         style={{ filter: 'blur(0.5px)' }}
                       />
                     ))}
@@ -1801,26 +1795,25 @@ export default function Home() {
               {/* ── AUTOPHAGY ── cellular cleanup (24h+), sparkles spread head→toes */}
               {(startTime || devMode) && currentH > 24 && (() => {
                 const autoIntensity = Math.min(1, (currentH - 24) / 24);
-                // Positions ordered top→bottom: torso first, then legs, then calves/feet
+                // All positions kept within the body silhouette outline
                 const corePositions = [
                   // Torso & arms — appear first (24h+)
-                  {t:15,l:48},{t:20,l:43},{t:22,l:55},{t:30,l:40},{t:32,l:58},
-                  {t:38,l:45},{t:40,l:53},{t:45,l:38},{t:46,l:60},
+                  {t:15,l:49},{t:20,l:46},{t:22,l:53},{t:30,l:44},{t:32,l:55},
+                  {t:36,l:47},{t:38,l:52},{t:42,l:46},{t:44,l:54},
                 ];
                 const legPositions = [
                   // Upper legs — appear at ~30h+
-                  {t:52,l:42},{t:54,l:56},{t:58,l:40},{t:60,l:58},
-                  {t:56,l:44},{t:57,l:55},
+                  {t:55,l:44},{t:55,l:55},{t:58,l:43},{t:58,l:56},
+                  {t:61,l:44},{t:61,l:55},
                 ];
                 const lowerPositions = [
-                  // Calves — appear at ~36h+
-                  {t:66,l:40},{t:68,l:58},{t:72,l:42},{t:70,l:56},
-                  {t:74,l:40},{t:73,l:58},
+                  // Calves — appear at ~36h+, narrower
+                  {t:66,l:43},{t:66,l:56},{t:70,l:44},{t:70,l:55},
+                  {t:73,l:44},{t:73,l:55},
                 ];
                 const feetPositions = [
-                  // Feet/toes — appear at ~42h+
-                  {t:80,l:38},{t:80,l:60},{t:83,l:36},{t:83,l:62},
-                  {t:85,l:38},{t:85,l:60},
+                  // Feet — appear at ~42h+, tightly within feet
+                  {t:78,l:42},{t:78,l:57},{t:80,l:41},{t:80,l:58},
                 ];
                 let positions = [...corePositions];
                 if (currentH > 30) positions = [...positions, ...legPositions];

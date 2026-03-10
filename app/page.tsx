@@ -1706,14 +1706,14 @@ export default function Home() {
                 const fatIntensity = Math.min(1, (currentH - 10) / 14);
                 const lateBoost = currentH > 24 ? Math.min(1, (currentH - 24) / 24) : 0;
                 const totalFat = Math.min(1, fatIntensity + lateBoost * 0.4);
-                // Origins moved lower — hips/butt/love handles, all travel downward within body
+                // Origins at hips/butt — particles travel outward and down the front of legs
                 const origins = [
-                  { t: 52, l: 42, dx: -3,  dy: 25 },  // left hip → down-slightly-in
-                  { t: 52, l: 57, dx: 3,   dy: 25 },  // right hip → down-slightly-in
-                  { t: 54, l: 45, dx: -5,  dy: 30 },  // left glute → down inner thigh
-                  { t: 54, l: 54, dx: 5,   dy: 30 },  // right glute → down inner thigh
-                  { t: 50, l: 40, dx: -2,  dy: 20 },  // left love handle → down
-                  { t: 50, l: 59, dx: 2,   dy: 20 },  // right love handle → down
+                  { t: 52, l: 42, dx: -12, dy: 22 },  // left hip → out-left and down
+                  { t: 52, l: 57, dx: 12,  dy: 22 },  // right hip → out-right and down
+                  { t: 54, l: 45, dx: -10, dy: 28 },  // left glute → out-left and down
+                  { t: 54, l: 54, dx: 10,  dy: 28 },  // right glute → out-right and down
+                  { t: 50, l: 40, dx: -14, dy: 18 },  // left love handle → out-left
+                  { t: 50, l: 59, dx: 14,  dy: 18 },  // right love handle → out-right
                 ];
                 const particlesPerOrigin = currentH > 36 ? 4 : currentH > 24 ? 3 : 2;
                 return (
@@ -1807,13 +1807,14 @@ export default function Home() {
                   {t:61,l:44},{t:61,l:55},
                 ];
                 const lowerPositions = [
-                  // Calves — appear at ~36h+, narrower
-                  {t:66,l:43},{t:66,l:56},{t:70,l:44},{t:70,l:55},
-                  {t:73,l:44},{t:73,l:55},
+                  // Calves — appear at ~36h+
+                  {t:66,l:43},{t:66,l:57},{t:70,l:44},{t:70,l:56},
+                  {t:73,l:43},{t:73,l:57},
                 ];
                 const feetPositions = [
-                  // Feet — appear at ~42h+, tightly within feet
-                  {t:78,l:42},{t:78,l:57},{t:80,l:41},{t:80,l:58},
+                  // Feet/toes — appear at ~42h+, extend low and slightly right
+                  {t:78,l:42},{t:78,l:58},{t:81,l:41},{t:81,l:59},
+                  {t:84,l:40},{t:84,l:60},{t:87,l:41},{t:87,l:59},
                 ];
                 let positions = [...corePositions];
                 if (currentH > 30) positions = [...positions, ...legPositions];

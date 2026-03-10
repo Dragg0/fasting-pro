@@ -1279,7 +1279,11 @@ export default function Home() {
             <Tooltip content={
               <div>
                 <div className="font-black text-cyan-400 mb-1">⚡ Accelerants</div>
-                <p>Accelerants simulate how movement speeds up fasting biology. Activities like walking, running, pickleball, and lifting burn glycogen faster and push you toward fat-burning and ketosis sooner.</p>
+                <p className="mb-2">Movement speeds up fasting biology — burning glycogen faster and pushing you toward fat-burning sooner. When adding a custom activity, pick the intensity that matches:</p>
+                <p className="text-green-300"><strong>Light (2x):</strong> Walking, yoga, stretching — low heart rate, conversational pace.</p>
+                <p className="text-cyan-300"><strong>Moderate (2.5x):</strong> Cycling, swimming, pickleball, hiking — breathing harder but sustainable.</p>
+                <p className="text-orange-300"><strong>Intense (3x):</strong> Running, HIIT, basketball, sports — high heart rate, can't hold a conversation.</p>
+                <p className="text-purple-300"><strong>Resistance (2.5x):</strong> Lifting, bodyweight, CrossFit — muscle tension, creates glycogen debt.</p>
               </div>
             }>
               <h2 className="inline-flex items-center gap-1 text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4 cursor-help">Accelerants <Info className="w-3 h-3 opacity-40" /></h2>

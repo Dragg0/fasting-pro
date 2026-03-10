@@ -19,11 +19,9 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
 
   useEffect(() => {
     const syncTouchUi = () => {
-      const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-      const noHover = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
-      const touchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
-      const narrow = typeof window !== 'undefined' && window.innerWidth < 900;
-      setIsTouchUi((coarse || noHover || touchPoints) && narrow);
+      // If screen is narrow (mobile/tablet), always use the modal UI
+      const isNarrow = typeof window !== 'undefined' && window.innerWidth < 900;
+      setIsTouchUi(isNarrow);
     };
     syncTouchUi();
     window.addEventListener('resize', syncTouchUi);

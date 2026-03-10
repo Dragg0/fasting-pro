@@ -86,6 +86,80 @@ function Sparkline({ data }: { data: number[] }) {
   );
 }
 
+// ─── CALENDAR ───────────────────────────────────────────────────────────────
+function FastingCalendar({ history }: { history: any[] }) {
+  const [viewDate, setViewDate] = useState(new Date());
+  const month = viewDate.getMonth();
+  const year = viewDate.getFullYear();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  
+  const fastMap = history.reduce((acc, f) => {
+    const d = new Date(f.end).toLocaleDateString('en-CA'); // YYYY-MM-DD
+    acc[d] = f;
+    return acc;
+  }, {} as any);
+
+  const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
+
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const blanks = Array.from({ length: firstDay }, (_, i) => i);
+
+  return (
+    <div className="bg-black/20 rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[0.65rem] font-black uppercase text-white tracking-widest">
+          {viewDate.toLocaleString('default', { month: 'long' })} {year}
+        </h3>
+        <div className="flex gap-2">
+          <button onClick={prevMonth} className="p-1 hover:bg-white/5 rounded-lg text-[#4b5563] hover:text-white">
+            <ChevronDown className="w-4 h-4 rotate-90" />
+          </button>
+          <button onClick={nextMonth} className="p-1 hover:bg-white/5 rounded-lg text-[#4b5563] hover:text-white">
+            <ChevronDown className="w-4 h-4 -rotate-90" />
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center mb-1">
+        {['S','M','T','W','T','F','S'].map(d => (
+          <div key={d} className="text-[0.5rem] font-black text-[#4b5563]">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {blanks.map(b => <div key={`b-${b}`} />)}
+        {days.map(d => {
+          const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const fast = fastMap[dateStr];
+          return (
+            <Tooltip key={d} content={fast ? (
+              <div>
+                <div className="font-black text-white mb-1">{fast.hours}h Fast</div>
+                <div className="text-[0.6rem] text-cyan-400 font-bold mb-2">Logged {new Date(fast.end).toLocaleTimeString()}</div>
+                {fast.refeed?.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {fast.refeed.map((f:any, i:number) => <span key={i} className="text-[0.5rem] bg-white/5 px-1.5 py-0.5 rounded-full">{f.emoji} {f.label}</span>)}
+                  </div>
+                )}
+              </div>
+            ) : null}>
+              <div className={`aspect-square flex items-center justify-center text-[0.65rem] font-bold rounded-lg border transition-all ${
+                fast ? (
+                  fast.hours >= 24 ? 'bg-purple-500/20 border-purple-500/40 text-purple-200' :
+                  fast.hours >= 18 ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-200' :
+                  'bg-green-500/20 border-green-500/40 text-green-200'
+                ) : 'bg-black/20 border-transparent text-[#4b5563]'
+              }`}>
+                {d}
+              </div>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── TYPES & CONSTANTS ───────────────────────────────────────────────────────
 type Phase = { id: number; start: number; end: number; title: string; short: string; fuel: string; organs: string[]; notes: string; science: string; };
 
@@ -219,6 +293,7 @@ export default function Home() {
   const [showRefeedSection, setShowRefeedSection] = useState(true);
   const [showEndFastModal, setShowEndFastModal] = useState(false);
   const [fastHistory, setFastHistory] = useState<{start:string;end:string;hours:number;refeed:{emoji:string;label:string;quality:string}[];streak:number}[]>([]);
+  const [historyView, setHistoryView] = useState<'list' | 'calendar'>('calendar');
 
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -963,47 +1038,66 @@ export default function Home() {
           {/* FAST HISTORY */}
           {fastHistory.length > 0 && (
             <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
-              <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4 flex items-center gap-2">
-                <Clock className="w-3 h-3 text-purple-500" /> Fast History
-              </h2>
-              <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
-                {fastHistory.map((record, i) => (
-                  <div key={i} className="bg-black/30 rounded-2xl p-3 border border-white/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="text-white font-black text-sm">{record.hours}h fast</div>
-                        <div className="text-[0.55rem] text-[#4b5563]">
-                          {new Date(record.end).toLocaleDateString([], {month:'short', day:'numeric'})} · Day {record.streak} streak
-                        </div>
-                      </div>
-                      <div className={`text-xs font-black px-2 py-1 rounded-xl border ${
-                        record.hours >= 24 ? 'text-purple-400 border-purple-500/30 bg-purple-500/10' :
-                        record.hours >= 18 ? 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' :
-                        'text-[#4b5563] border-white/5'
-                      }`}>
-                        {record.hours >= 24 ? '🧬 Deep' : record.hours >= 18 ? '🔥 Ketosis' : '✓ Done'}
-                      </div>
-                    </div>
-                    {record.refeed.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {record.refeed.map((f, j) => (
-                          <span key={j} className={`text-[0.55rem] font-black px-2 py-0.5 rounded-full border ${
-                            f.quality==='excellent' ? 'text-green-400 border-green-500/20 bg-green-500/10' :
-                            f.quality==='good' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' :
-                            f.quality==='fair' ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
-                            'text-red-400 border-red-500/20 bg-red-500/10'
-                          }`}>
-                            {f.emoji} {f.label}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {record.refeed.length === 0 && (
-                      <div className="text-[0.55rem] text-[#4b5563]">No refeed logged</div>
-                    )}
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black flex items-center gap-2">
+                  <Clock className="w-3 h-3 text-purple-500" /> Fast History
+                </h2>
+                <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                  <button onClick={() => setHistoryView('calendar')}
+                    className={`px-2 py-1 rounded-lg text-[0.55rem] font-black transition-all ${historyView==='calendar' ? 'bg-purple-500/20 text-purple-400' : 'text-[#4b5563] hover:text-white'}`}>
+                    CAL
+                  </button>
+                  <button onClick={() => setHistoryView('list')}
+                    className={`px-2 py-1 rounded-lg text-[0.55rem] font-black transition-all ${historyView==='list' ? 'bg-purple-500/20 text-purple-400' : 'text-[#4b5563] hover:text-white'}`}>
+                    LIST
+                  </button>
+                </div>
               </div>
+
+              <AnimatePresence mode="wait">
+                {historyView === 'calendar' ? (
+                  <motion.div key="calendar" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                    <FastingCalendar history={fastHistory} />
+                  </motion.div>
+                ) : (
+                  <motion.div key="list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                    className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                    {fastHistory.map((record, i) => (
+                      <div key={i} className="bg-black/30 rounded-2xl p-3 border border-white/5">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <div className="text-white font-black text-sm">{record.hours}h fast</div>
+                            <div className="text-[0.55rem] text-[#4b5563]">
+                              {new Date(record.end).toLocaleDateString([], {month:'short', day:'numeric'})} · Day {record.streak} streak
+                            </div>
+                          </div>
+                          <div className={`text-xs font-black px-2 py-1 rounded-xl border ${
+                            record.hours >= 24 ? 'text-purple-400 border-purple-500/30 bg-purple-500/10' :
+                            record.hours >= 18 ? 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' :
+                            'text-[#4b5563] border-white/5'
+                          }`}>
+                            {record.hours >= 24 ? '🧬 Deep' : record.hours >= 18 ? '🔥 Ketosis' : '✓ Done'}
+                          </div>
+                        </div>
+                        {record.refeed.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {record.refeed.map((f, j) => (
+                              <span key={j} className={`text-[0.55rem] font-black px-2 py-0.5 rounded-full border ${
+                                f.quality==='excellent' ? 'text-green-400 border-green-500/20 bg-green-500/10' :
+                                f.quality==='good' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' :
+                                f.quality==='fair' ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
+                                'text-red-400 border-red-500/20 bg-red-500/10'
+                              }`}>
+                                {f.emoji} {f.label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </section>
           )}
 

@@ -106,6 +106,50 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
   );
 }
 
+// ─── MP BUTTON (tap = award, long-press = info) ────────────────────────────
+function MpButton({ children, onTap, tipContent, color = 'purple' }: { children: React.ReactNode; onTap: () => void; tipContent: React.ReactNode; color?: string }) {
+  const [showTip, setShowTip] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  const startPress = () => {
+    didLongPress.current = false;
+    timerRef.current = setTimeout(() => {
+      didLongPress.current = true;
+      setShowTip(true);
+    }, 500);
+  };
+
+  const endPress = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!didLongPress.current) onTap();
+  };
+
+  return (
+    <>
+      <button
+        onTouchStart={startPress} onTouchEnd={endPress} onTouchCancel={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
+        onMouseDown={startPress} onMouseUp={endPress} onMouseLeave={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
+        className={`group w-full flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border ${color==='cyan'?'border-cyan-500/20 hover:border-cyan-500/40':'border-purple-500/10 hover:border-purple-500/40'} p-4 rounded-3xl transition-all text-center`}
+      >
+        {children}
+      </button>
+      {showTip && createPortal(
+        <>
+          <div className="fixed inset-0 z-[2147483646] bg-black/60 backdrop-blur-sm" onClick={() => setShowTip(false)} />
+          <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[2147483647] flex justify-center">
+            <div className="relative w-full max-w-sm rounded-3xl border border-cyan-500/25 bg-[#0c1018] p-5 shadow-2xl shadow-black/70">
+              <button onClick={() => setShowTip(false)} className="absolute right-3 top-3 text-sm font-black text-[#98a4bb] hover:text-white">✕</button>
+              <div className="pr-6 text-sm text-[#c8d4e8] leading-relaxed break-words">{tipContent}</div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  );
+}
+
 // ─── SPARKLINE ──────────────────────────────────────────────────────────────
 function Sparkline({ data }: { data: number[] }) {
   if (data.length < 2) return null;
@@ -1014,20 +1058,20 @@ export default function Home() {
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {MP_ACTIONS.map(({ icon: Icon, color, points, label, science }) => (
-                <Tooltip key={label} content={
+              {MP_ACTIONS.map(({ icon: Icon, color, points, label, science }) => {
+                const tipContent = (
                   <div>
                     <div className={`font-black mb-1 ${color==='cyan' ? 'text-cyan-400' : 'text-purple-400'}`}>+{Math.round(points * streakMultiplier)} pts{streak>=2 ? ` (${streakMultiplier.toFixed(1)}x)`:''}</div>
                     <p>{science}</p>
                   </div>
-                }>
-                  <button onClick={() => addMp(points)}
-                    className={`group w-full flex flex-col items-center justify-center gap-2 bg-[#0f131c]/60 border ${color==='cyan'?'border-cyan-500/20 hover:border-cyan-500/40':'border-purple-500/10 hover:border-purple-500/40'} p-4 rounded-3xl transition-all text-center`}>
+                );
+                return (
+                  <MpButton key={label} onTap={() => addMp(points)} tipContent={tipContent} color={color}>
                     <Icon className={`w-5 h-5 ${color==='cyan'?'text-cyan-400':'text-purple-400'} group-hover:scale-110 transition-transform`} />
                     <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">{label}</span>
-                  </button>
-                </Tooltip>
-              ))}
+                  </MpButton>
+                );
+              })}
             </div>
           </section>
 

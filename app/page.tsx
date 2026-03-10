@@ -1505,11 +1505,18 @@ export default function Home() {
         <div className="lg:col-span-5 space-y-6">
           <div className="relative bg-white/[0.02] border border-white/5 rounded-[3rem] p-8 flex flex-col items-center overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.1),transparent_70%)]" />
-            <h2 className="text-[0.65rem] uppercase tracking-[0.3em] text-[#98a4bb] font-black mb-10 self-start z-10">
-              Metabolic Anatomy <span className="text-cyan-500 ml-2">LIVE</span>
-            </h2>
-            <div className="relative w-full max-w-[400px] flex justify-center py-10 z-10">
+            <div className="flex items-center justify-between w-full mb-6 z-10">
+              <h2 className="text-[0.65rem] uppercase tracking-[0.3em] text-[#98a4bb] font-black">
+                Metabolic Anatomy <span className="text-cyan-500 ml-2">LIVE</span>
+              </h2>
+              <div className="text-[0.55rem] font-black uppercase tracking-widest text-cyan-400/80">
+                {currentPhase.short}
+              </div>
+            </div>
+            <div className="relative w-full max-w-[400px] flex justify-center py-6 z-10">
               <img src="/body.png" alt="Anatomy" className="w-full opacity-80 mix-blend-lighten" />
+
+              {/* Scanner line */}
               <AnimatePresence>
                 {showScanner && (
                   <motion.div initial={{ top:"0%" }} animate={{ top:"100%" }} exit={{ opacity:0 }}
@@ -1517,10 +1524,111 @@ export default function Home() {
                     className="absolute left-0 w-full h-[2px] bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.8)] z-20" />
                 )}
               </AnimatePresence>
-              <div className={`absolute top-[13%] left-1/2 -translate-x-1/2 w-10 h-6 bg-purple-500/40 blur-lg rounded-full transition-opacity duration-1000 ${currentH>18?'opacity-100':'opacity-0'}`} />
-              <div className={`absolute top-[31%] left-[56%] -translate-x-1/2 w-12 h-8 bg-cyan-400/40 blur-xl rounded-full transition-opacity duration-1000 ${currentH<12?'opacity-100':'opacity-0'}`} />
+
+              {/* ── BRAIN ── ketone-fueled (18h+), brightness scales with MP */}
+              {(() => {
+                const brainActive = currentH > 18;
+                const mpGlow = Math.min(1, mp / 200); // scales 0→1 over 200 MP
+                const brainOpacity = brainActive ? 0.4 + mpGlow * 0.5 : mpGlow > 0.1 ? mpGlow * 0.25 : 0;
+                const brainBlur = brainActive ? 'blur-xl' : 'blur-lg';
+                const brainSize = brainActive ? 'w-14 h-10' : 'w-10 h-6';
+                return brainOpacity > 0 ? (
+                  <motion.div
+                    animate={{ opacity: [brainOpacity * 0.7, brainOpacity, brainOpacity * 0.7], scale: [0.95, 1.05, 0.95] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                    className={`absolute top-[11%] left-1/2 -translate-x-1/2 ${brainSize} bg-purple-500 ${brainBlur} rounded-full pointer-events-none`}
+                  />
+                ) : null;
+              })()}
+
+              {/* ── STOMACH ── digesting (0-4h), fades as digestion ends */}
+              {currentH < 6 && (
+                <motion.div
+                  animate={{ opacity: [Math.max(0.1, 0.5 - currentH * 0.1), Math.max(0.15, 0.6 - currentH * 0.1)], scale: [0.97, 1.03, 0.97] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute top-[38%] left-[48%] -translate-x-1/2 w-10 h-8 bg-green-500 blur-xl rounded-full pointer-events-none"
+                />
+              )}
+
+              {/* ── LIVER ── glycogen depletion (2-18h), peak at 8-12h */}
+              {currentH > 2 && currentH < 24 && (() => {
+                const liverIntensity = currentH < 8 ? (currentH - 2) / 6 : currentH < 18 ? 1 : Math.max(0, 1 - (currentH - 18) / 6);
+                return (
+                  <motion.div
+                    animate={{ opacity: [liverIntensity * 0.3, liverIntensity * 0.6, liverIntensity * 0.3], scale: [0.96, 1.04, 0.96] }}
+                    transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute top-[30%] left-[55%] -translate-x-1/2 w-12 h-9 bg-cyan-400 blur-xl rounded-full pointer-events-none"
+                  />
+                );
+              })()}
+
+              {/* ── FAT / WAIST ── fat mobilization (12h+), intensifies over time */}
+              {currentH > 10 && (() => {
+                const fatIntensity = Math.min(1, (currentH - 10) / 14);
+                return (
+                  <motion.div
+                    animate={{ opacity: [fatIntensity * 0.2, fatIntensity * 0.45, fatIntensity * 0.2], scale: [0.98, 1.02, 0.98] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute top-[43%] left-1/2 -translate-x-1/2 w-24 h-10 bg-orange-500 blur-2xl rounded-full pointer-events-none"
+                  />
+                );
+              })()}
+
+              {/* ── HEART ── deep ketosis fuel (24h+) */}
+              {currentH > 20 && (() => {
+                const heartIntensity = Math.min(1, (currentH - 20) / 8);
+                return (
+                  <motion.div
+                    animate={{ opacity: [heartIntensity * 0.25, heartIntensity * 0.5, heartIntensity * 0.25], scale: [0.97, 1.05, 0.97] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute top-[25%] left-[47%] -translate-x-1/2 w-8 h-8 bg-red-500 blur-lg rounded-full pointer-events-none"
+                  />
+                );
+              })()}
+
+              {/* ── ORGAN LABELS ── show which organs are active */}
+              <div className="absolute top-[8%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+                {currentH > 18 && (
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[0.45rem] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                    Brain · Ketones
+                  </motion.span>
+                )}
+              </div>
+              {currentH > 2 && currentH < 24 && (
+                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="absolute top-[28%] right-[8%] text-[0.45rem] font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20 pointer-events-none">
+                  Liver · {currentH < 12 ? 'Glycogen' : 'Ketogenesis'}
+                </motion.span>
+              )}
+              {currentH > 12 && (
+                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="absolute top-[50%] right-[8%] text-[0.45rem] font-black uppercase tracking-widest text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20 pointer-events-none">
+                  Fat · Mobilizing
+                </motion.span>
+              )}
+              {currentH > 24 && (
+                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="absolute top-[22%] left-[8%] text-[0.45rem] font-black uppercase tracking-widest text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 pointer-events-none">
+                  Heart · Ketones
+                </motion.span>
+              )}
+
+              {/* ── PHASE OVERLAY ── */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center pointer-events-none">
+                <motion.div
+                  key={currentPhase.title}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-2"
+                >
+                  <div className="text-[0.55rem] font-black uppercase tracking-widest text-white">{currentPhase.title}</div>
+                  <div className="text-[0.45rem] font-bold text-cyan-400">{currentPhase.fuel}</div>
+                </motion.div>
+              </div>
             </div>
-            <div className="mt-auto w-full pt-10 flex flex-wrap gap-2 justify-center z-10">
+
+            {/* Milestone pills */}
+            <div className="mt-auto w-full pt-6 flex flex-wrap gap-2 justify-center z-10">
               {[12,24,48,72].map(m => (
                 <Tooltip key={m} content={
                   <div>

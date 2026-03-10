@@ -608,12 +608,28 @@ export default function Home() {
 
   const logWater = async () => {
     const n = waterCount + 1; setWaterCount(n);
-    if (session) await supabase.from('profiles').update({ water_count: n }).eq('id', session.user.id);
+    const pts = 5;
+    const newMp = mp + pts, newTotal = totalMpEver + pts;
+    setMp(newMp); setTotalMpEver(newTotal);
+    const entry = { label: 'Water', points: pts, time: new Date().toISOString() };
+    const newLog = [entry, ...mpLog].slice(0, 50);
+    setMpLog(newLog);
+    if (session) await supabase.from('profiles').update({
+      water_count: n, mind_points: newMp, total_mp_ever: newTotal, mp_log: JSON.stringify(newLog),
+    }).eq('id', session.user.id);
   };
 
   const logElectrolyte = async () => {
     const n = electrolyteCount + 1; setElectrolyteCount(n);
-    if (session) await supabase.from('profiles').update({ electrolyte_count: n }).eq('id', session.user.id);
+    const pts = 5;
+    const newMp = mp + pts, newTotal = totalMpEver + pts;
+    setMp(newMp); setTotalMpEver(newTotal);
+    const entry = { label: 'Electrolytes', points: pts, time: new Date().toISOString() };
+    const newLog = [entry, ...mpLog].slice(0, 50);
+    setMpLog(newLog);
+    if (session) await supabase.from('profiles').update({
+      electrolyte_count: n, mind_points: newMp, total_mp_ever: newTotal, mp_log: JSON.stringify(newLog),
+    }).eq('id', session.user.id);
   };
 
   const logWeight = async () => {
@@ -1139,9 +1155,9 @@ export default function Home() {
                   <div className="text-2xl">💧</div>
                   <div className="text-3xl font-black text-cyan-400">{waterCount}</div>
                   <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#4b5563]">glasses</div>
-                  <button onClick={logWater}
+                  <button onClick={(e) => { e.stopPropagation(); logWater(); }}
                     className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 font-black py-2 rounded-xl text-xs transition-all">
-                    + Water
+                    + Water <span className="text-purple-400 opacity-60">+5 MP</span>
                   </button>
                 </div>
               </Tooltip>
@@ -1155,9 +1171,9 @@ export default function Home() {
                   <div className="text-2xl">⚡</div>
                   <div className="text-3xl font-black text-orange-400">{electrolyteCount}</div>
                   <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#4b5563]">servings</div>
-                  <button onClick={logElectrolyte}
+                  <button onClick={(e) => { e.stopPropagation(); logElectrolyte(); }}
                     className="w-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 font-black py-2 rounded-xl text-xs transition-all">
-                    + Electrolytes
+                    + Electrolytes <span className="text-purple-400 opacity-60">+5 MP</span>
                   </button>
                 </div>
               </Tooltip>

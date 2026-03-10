@@ -1618,7 +1618,7 @@ export default function Home() {
               )}
 
               {/* ── PHASE OVERLAY ── */}
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-center pointer-events-none">
+              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-center pointer-events-none">
                 <motion.div
                   key={startTime ? currentPhase.title : 'idle'}
                   initial={{ opacity: 0, y: 5 }}

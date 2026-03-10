@@ -323,6 +323,16 @@ export default function Home() {
     else alert("Check your email for the magic login link!");
   };
 
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) alert(error.message);
+  };
+
   const importLegacyData = async () => {
     const code = prompt("Paste your Gazelam Sync Code:");
     if (!code) return;
@@ -662,10 +672,17 @@ export default function Home() {
               </button>
             </>
           ) : (
-            <button onClick={handleAuth}
-              className="bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center gap-2 text-white">
-              <LogIn className="w-5 h-5 text-cyan-400" /> {loading ? <Loader2 className="animate-spin" /> : "SIGN IN"}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleGoogleLogin}
+                className="bg-white text-black px-4 py-4 rounded-2xl font-bold transition-all flex items-center gap-2 hover:bg-gray-100">
+                <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
+                GOOGLE
+              </button>
+              <button onClick={handleAuth}
+                className="bg-[#151a26] hover:bg-[#1c2333] border border-white/10 px-6 py-4 rounded-2xl font-bold transition-all flex items-center gap-2 text-white">
+                <LogIn className="w-5 h-5 text-cyan-400" /> {loading ? <Loader2 className="animate-spin" /> : "EMAIL"}
+              </button>
+            </div>
           )}
           {startTime && (
             <button onClick={() => setShowEndFastModal(true)}

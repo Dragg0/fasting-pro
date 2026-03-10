@@ -316,7 +316,7 @@ export default function Home() {
   };
 
   const handleAuth = async () => {
-    const email = prompt("Enter your email:");
+    const email = prompt("Enter your email for the Magic Link login:");
     if (!email) return;
     const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
     if (error) alert(error.message);

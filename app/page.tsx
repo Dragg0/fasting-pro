@@ -180,15 +180,21 @@ function Sparkline({ data }: { data: number[] }) {
 }
 
 // ─── CALENDAR ───────────────────────────────────────────────────────────────
-function FastingCalendar({ history, activityLog }: { history: any[]; activityLog: {emoji:string;label:string;minutes:number;bonusH:number;ts:string}[] }) {
+function FastingCalendar({ history, activityLog, mpLog, waterLog, electrolyteLog }: {
+  history: any[];
+  activityLog: {emoji:string;label:string;minutes:number;bonusH:number;ts:string}[];
+  mpLog: {label:string;points:number;time:string}[];
+  waterLog: number; // today's count (we'll also derive from mpLog)
+  electrolyteLog: number;
+}) {
   const [viewDate, setViewDate] = useState(new Date());
   const month = viewDate.getMonth();
   const year = viewDate.getFullYear();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
-  
+
   const fastMap = history.reduce((acc, f) => {
-    const d = new Date(f.end).toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const d = new Date(f.end).toLocaleDateString('en-CA');
     acc[d] = f;
     return acc;
   }, {} as any);
@@ -198,17 +204,27 @@ function FastingCalendar({ history, activityLog }: { history: any[]; activityLog
     if (!acc[d]) acc[d] = [];
     acc[d].push(a);
     return acc;
-  }, {} as Record<string, {emoji:string;label:string;minutes:number;bonusH:number;ts:string}[]>);
+  }, {} as Record<string, typeof activityLog>);
 
-  const getActivityDots = (dateStr: string) => {
-    const acts = activityMap[dateStr] || [];
-    const labels = new Set(acts.map(a => a.label));
+  // Build sets of dates for each dot type from mpLog
+  const hydrationDays = new Set<string>();
+  const mpDays = new Set<string>();
+  mpLog.forEach(entry => {
+    const d = new Date(entry.time).toLocaleDateString('en-CA');
+    if (entry.label === 'Water' || entry.label === 'Electrolytes') {
+      hydrationDays.add(d);
+    } else {
+      mpDays.add(d);
+    }
+  });
+
+  const getDots = (dateStr: string) => {
     const dots: { key: string; color: string }[] = [];
-    if (labels.has('Walk')) dots.push({ key: 'walk', color: 'bg-green-400' });
-    if (labels.has('Run')) dots.push({ key: 'run', color: 'bg-red-400' });
-    if (labels.has('Pickleball')) dots.push({ key: 'pickleball', color: 'bg-yellow-400' });
-    if (labels.has('Lift')) dots.push({ key: 'lift', color: 'bg-cyan-400' });
-    return dots.slice(0, 4);
+    if (fastMap[dateStr])              dots.push({ key: 'fast',      color: 'bg-green-400' });
+    if (hydrationDays.has(dateStr))    dots.push({ key: 'hydration', color: 'bg-cyan-400' });
+    if (activityMap[dateStr]?.length)   dots.push({ key: 'accel',    color: 'bg-orange-400' });
+    if (mpDays.has(dateStr))           dots.push({ key: 'mp',        color: 'bg-purple-400' });
+    return dots;
   };
 
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
@@ -242,7 +258,7 @@ function FastingCalendar({ history, activityLog }: { history: any[]; activityLog
         {days.map(d => {
           const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const fast = fastMap[dateStr];
-          const activityDots = getActivityDots(dateStr);
+          const activityDots = getDots(dateStr);
           const dayActivities = activityMap[dateStr] || [];
           return (
             <Tooltip key={d} content={fast || dayActivities.length ? (
@@ -291,6 +307,19 @@ function FastingCalendar({ history, activityLog }: { history: any[]; activityLog
             </Tooltip>
           );
         })}
+      </div>
+      <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
+        {[
+          { color: 'bg-green-400', label: 'Fast' },
+          { color: 'bg-cyan-400', label: 'Hydration' },
+          { color: 'bg-orange-400', label: 'Accelerant' },
+          { color: 'bg-purple-400', label: 'Mind Pts' },
+        ].map(l => (
+          <div key={l.label} className="flex items-center gap-1">
+            <span className={`w-1.5 h-1.5 rounded-full ${l.color}`} />
+            <span className="text-[0.5rem] font-bold text-[#4b5563]">{l.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1379,7 +1408,7 @@ export default function Home() {
             <AnimatePresence mode="wait">
               {historyView === 'calendar' ? (
                 <motion.div key="calendar" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                  <FastingCalendar history={fastHistory} activityLog={activityLog} />
+                  <FastingCalendar history={fastHistory} activityLog={activityLog} mpLog={mpLog} waterLog={waterCount} electrolyteLog={electrolyteCount} />
                 </motion.div>
               ) : (
                 <motion.div key="list" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}

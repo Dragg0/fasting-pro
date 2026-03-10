@@ -536,6 +536,56 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // ── GYROSCOPE SHIMMER ──
+  const [hasGyro, setHasGyro] = useState(false);
+  const shimmerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      if (!shimmerRef.current || !active) return;
+      // gamma: left/right tilt (-90 to 90), beta: front/back tilt (-180 to 180)
+      const x = Math.max(0, Math.min(100, ((e.gamma || 0) + 45) / 90 * 100));
+      const y = Math.max(0, Math.min(100, ((e.beta || 0) + 30) / 120 * 100));
+      const angle = 110 + (e.gamma || 0) * 0.5;
+      shimmerRef.current.style.setProperty('--shimmer-x', String(x));
+      shimmerRef.current.style.setProperty('--shimmer-y', String(y));
+      shimmerRef.current.style.setProperty('--shimmer-angle', String(angle));
+    };
+
+    const requestPermission = async () => {
+      // iOS 13+ requires permission
+      if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+        try {
+          const perm = await (DeviceOrientationEvent as any).requestPermission();
+          if (perm === 'granted') {
+            setHasGyro(true);
+            window.addEventListener('deviceorientation', handleOrientation);
+          }
+        } catch { /* denied or unavailable */ }
+      } else {
+        // Android / desktop — check if events fire
+        const testHandler = (e: DeviceOrientationEvent) => {
+          if (e.gamma !== null) {
+            setHasGyro(true);
+            window.addEventListener('deviceorientation', handleOrientation);
+          }
+          window.removeEventListener('deviceorientation', testHandler);
+        };
+        window.addEventListener('deviceorientation', testHandler);
+        // If no event fires in 1s, it's desktop
+        setTimeout(() => window.removeEventListener('deviceorientation', testHandler), 1000);
+      }
+    };
+
+    requestPermission();
+    return () => {
+      active = false;
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
+  }, []);
+
   useEffect(() => {
     if (!startTime) return;
     const interval = setInterval(() => {
@@ -1675,7 +1725,7 @@ export default function Home() {
             <h2 className="text-[0.65rem] uppercase tracking-[0.2em] text-[#98a4bb] font-black mb-6 flex items-center gap-2">
               <Trophy className="w-4 h-4 text-yellow-500" /> Badge Collection
             </h2>
-            <div className="grid grid-cols-4 gap-3">
+            <div ref={shimmerRef} className="grid grid-cols-4 gap-3">
               {BADGES.map(badge => {
                 const earned = badgesEarned.includes(badge.id);
                 return (
@@ -1690,7 +1740,7 @@ export default function Home() {
                     </div>
                   }>
                     <div className={`relative flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all cursor-help overflow-hidden ${earned ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/5 opacity-30'}`}>
-                      {earned && <div className="absolute inset-0 badge-shimmer rounded-2xl" />}
+                      {earned && <div className={`absolute inset-0 badge-shimmer rounded-2xl ${!hasGyro ? 'badge-shimmer-auto' : ''}`} />}
                       <span className={`text-2xl relative z-10 ${earned?'':'grayscale'}`}>{badge.emoji}</span>
                       <span className={`text-[0.5rem] font-black text-center leading-tight relative z-10 ${earned?'text-yellow-300':'text-[#4b5563]'}`}>{badge.name}</span>
                     </div>

@@ -1626,37 +1626,78 @@ export default function Home() {
               {/* ── BRAIN ── ketone-fueled (18h+), brightness scales with MP */}
               {(() => {
                 const brainActive = (startTime || devMode) && currentH > 18;
-                const mpGlow = Math.min(1, mp / 200); // scales 0→1 over 200 MP
-                const brainOpacity = brainActive ? 0.4 + mpGlow * 0.5 : mpGlow > 0.1 ? mpGlow * 0.25 : 0;
-                const brainBlur = brainActive ? 'blur-xl' : 'blur-lg';
-                const brainSize = brainActive ? 'w-14 h-10' : 'w-10 h-6';
+                const mpGlow = Math.min(1, mp / 200);
+                const brainOpacity = brainActive ? 0.6 + mpGlow * 0.4 : mpGlow > 0.1 ? mpGlow * 0.3 : 0;
                 return brainOpacity > 0 ? (
-                  <motion.div
-                    animate={{ opacity: [brainOpacity * 0.7, brainOpacity, brainOpacity * 0.7], scale: [0.95, 1.05, 0.95] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                    className={`absolute top-[11%] left-1/2 -translate-x-1/2 ${brainSize} bg-purple-500 ${brainBlur} rounded-full pointer-events-none`}
-                  />
+                  <>
+                    {/* Core glow */}
+                    <motion.div
+                      animate={{ opacity: [brainOpacity * 0.6, brainOpacity, brainOpacity * 0.6], scale: [0.9, 1.15, 0.9] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                      className={`absolute top-[10%] left-1/2 -translate-x-1/2 ${brainActive ? 'w-20 h-14' : 'w-12 h-8'} bg-purple-500 blur-2xl rounded-full pointer-events-none`}
+                    />
+                    {/* Outer halo */}
+                    {brainActive && (
+                      <motion.div
+                        animate={{ opacity: [0.1, 0.3, 0.1], scale: [0.95, 1.1, 0.95] }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute top-[7%] left-1/2 -translate-x-1/2 w-28 h-20 bg-purple-400/40 blur-3xl rounded-full pointer-events-none"
+                      />
+                    )}
+                    {/* Floating ketone particles rising from brain */}
+                    {brainActive && [0,1,2,3,4].map(i => (
+                      <motion.div key={`bk-${i}`}
+                        initial={{ opacity: 0, y: 0, x: 0 }}
+                        animate={{ opacity: [0, 0.8, 0], y: -40, x: (i - 2) * 12 }}
+                        transition={{ duration: 2.5 + i * 0.3, repeat: Infinity, delay: i * 0.5, ease: 'easeOut' }}
+                        className="absolute top-[12%] left-[49%] w-1.5 h-1.5 bg-purple-300 rounded-full pointer-events-none"
+                        style={{ filter: 'blur(0.5px)' }}
+                      />
+                    ))}
+                  </>
                 ) : null;
               })()}
 
               {/* ── STOMACH ── digesting (0-4h), fades as digestion ends */}
               {(startTime || devMode) && currentH < 6 && (
-                <motion.div
-                  animate={{ opacity: [Math.max(0.1, 0.5 - currentH * 0.1), Math.max(0.15, 0.6 - currentH * 0.1)], scale: [0.97, 1.03, 0.97] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute top-[38%] left-[48%] -translate-x-1/2 w-10 h-8 bg-green-500 blur-xl rounded-full pointer-events-none"
-                />
+                <>
+                  <motion.div
+                    animate={{ opacity: [Math.max(0.15, 0.6 - currentH * 0.1), Math.max(0.25, 0.8 - currentH * 0.1)], scale: [0.95, 1.08, 0.95] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute top-[37%] left-[48%] -translate-x-1/2 w-14 h-12 bg-green-500 blur-2xl rounded-full pointer-events-none"
+                  />
+                  {/* Digestion particles swirling */}
+                  {[0,1,2].map(i => (
+                    <motion.div key={`sg-${i}`}
+                      animate={{ opacity: [0, 0.6 - currentH * 0.08, 0], rotate: [0, 360], scale: [0.5, 1, 0.5] }}
+                      transition={{ duration: 3 + i * 0.5, repeat: Infinity, delay: i * 0.8, ease: 'easeInOut' }}
+                      className="absolute top-[39%] left-[47%] w-1 h-1 bg-green-300 rounded-full pointer-events-none"
+                      style={{ transformOrigin: `${6 + i * 4}px ${6 + i * 3}px` }}
+                    />
+                  ))}
+                </>
               )}
 
               {/* ── LIVER ── glycogen depletion (2-18h), peak at 8-12h */}
               {(startTime || devMode) && currentH > 2 && currentH < 24 && (() => {
                 const liverIntensity = currentH < 8 ? (currentH - 2) / 6 : currentH < 18 ? 1 : Math.max(0, 1 - (currentH - 18) / 6);
                 return (
-                  <motion.div
-                    animate={{ opacity: [liverIntensity * 0.3, liverIntensity * 0.6, liverIntensity * 0.3], scale: [0.96, 1.04, 0.96] }}
-                    transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute top-[30%] left-[55%] -translate-x-1/2 w-12 h-9 bg-cyan-400 blur-xl rounded-full pointer-events-none"
-                  />
+                  <>
+                    <motion.div
+                      animate={{ opacity: [liverIntensity * 0.4, liverIntensity * 0.8, liverIntensity * 0.4], scale: [0.93, 1.1, 0.93] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute top-[29%] left-[55%] -translate-x-1/2 w-16 h-12 bg-cyan-400 blur-2xl rounded-full pointer-events-none"
+                    />
+                    {/* Glycogen → ketone conversion particles */}
+                    {liverIntensity > 0.3 && [0,1,2].map(i => (
+                      <motion.div key={`lk-${i}`}
+                        animate={{ opacity: [0, liverIntensity * 0.7, 0], x: [0, 15 + i * 5], y: [0, -20 - i * 8] }}
+                        transition={{ duration: 2 + i * 0.4, repeat: Infinity, delay: i * 0.6, ease: 'easeOut' }}
+                        className="absolute top-[31%] left-[54%] w-1.5 h-1.5 bg-cyan-300 rounded-full pointer-events-none"
+                        style={{ filter: 'blur(0.5px)' }}
+                      />
+                    ))}
+                  </>
                 );
               })()}
 
@@ -1664,11 +1705,29 @@ export default function Home() {
               {(startTime || devMode) && currentH > 10 && (() => {
                 const fatIntensity = Math.min(1, (currentH - 10) / 14);
                 return (
-                  <motion.div
-                    animate={{ opacity: [fatIntensity * 0.2, fatIntensity * 0.45, fatIntensity * 0.2], scale: [0.98, 1.02, 0.98] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute top-[43%] left-1/2 -translate-x-1/2 w-24 h-10 bg-orange-500 blur-2xl rounded-full pointer-events-none"
-                  />
+                  <>
+                    {/* Main glow */}
+                    <motion.div
+                      animate={{ opacity: [fatIntensity * 0.3, fatIntensity * 0.6, fatIntensity * 0.3], scale: [0.95, 1.08, 0.95] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute top-[42%] left-1/2 -translate-x-1/2 w-28 h-14 bg-orange-500 blur-2xl rounded-full pointer-events-none"
+                    />
+                    {/* Secondary pulse ring */}
+                    <motion.div
+                      animate={{ opacity: [0.05, fatIntensity * 0.2, 0.05], scale: [0.9, 1.2, 0.9] }}
+                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute top-[40%] left-1/2 -translate-x-1/2 w-36 h-18 bg-orange-400/30 blur-3xl rounded-full pointer-events-none"
+                    />
+                    {/* Fat droplet particles dissolving upward */}
+                    {fatIntensity > 0.2 && [0,1,2,3,4,5].map(i => (
+                      <motion.div key={`fd-${i}`}
+                        animate={{ opacity: [0, fatIntensity * 0.6, 0], y: [-5, -35 - i * 6], x: [(i - 2.5) * 8, (i - 2.5) * 12] }}
+                        transition={{ duration: 2.5 + i * 0.3, repeat: Infinity, delay: i * 0.4, ease: 'easeOut' }}
+                        className="absolute top-[44%] left-[49%] w-1 h-1 bg-orange-300 rounded-full pointer-events-none"
+                        style={{ filter: 'blur(0.5px)' }}
+                      />
+                    ))}
+                  </>
                 );
               })()}
 
@@ -1676,39 +1735,58 @@ export default function Home() {
               {(startTime || devMode) && currentH > 20 && (() => {
                 const heartIntensity = Math.min(1, (currentH - 20) / 8);
                 return (
-                  <motion.div
-                    animate={{ opacity: [heartIntensity * 0.25, heartIntensity * 0.5, heartIntensity * 0.25], scale: [0.97, 1.05, 0.97] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute top-[25%] left-[47%] -translate-x-1/2 w-8 h-8 bg-red-500 blur-lg rounded-full pointer-events-none"
-                  />
+                  <>
+                    {/* Core heartbeat glow */}
+                    <motion.div
+                      animate={{ opacity: [heartIntensity * 0.3, heartIntensity * 0.7, heartIntensity * 0.3], scale: [0.9, 1.15, 0.9] }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute top-[24%] left-[47%] -translate-x-1/2 w-12 h-12 bg-red-500 blur-xl rounded-full pointer-events-none"
+                    />
+                    {/* Heartbeat pulse ring */}
+                    <motion.div
+                      animate={{ opacity: [0, heartIntensity * 0.3, 0], scale: [0.8, 1.4, 0.8] }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute top-[23%] left-[47%] -translate-x-1/2 w-16 h-16 border border-red-400/30 rounded-full pointer-events-none"
+                    />
+                    {/* Blood flow particles */}
+                    {heartIntensity > 0.3 && [0,1,2].map(i => (
+                      <motion.div key={`hb-${i}`}
+                        animate={{ opacity: [0, heartIntensity * 0.5, 0], y: [0, 25 + i * 10], scale: [1, 0.5] }}
+                        transition={{ duration: 1.5 + i * 0.3, repeat: Infinity, delay: i * 0.4, ease: 'easeOut' }}
+                        className="absolute top-[27%] left-[46%] w-1 h-1 bg-red-300 rounded-full pointer-events-none"
+                        style={{ filter: 'blur(0.5px)' }}
+                      />
+                    ))}
+                  </>
                 );
               })()}
 
               {/* ── ORGAN LABELS ── show which organs are active */}
               {(startTime || devMode) && (
                 <>
-                  <div className="absolute top-[8%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+                  <div className="absolute top-[5%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
                     {currentH > 18 && (
-                      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[0.45rem] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                      <motion.span initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-[0.5rem] font-black uppercase tracking-widest text-purple-300 bg-purple-500/15 px-3 py-1 rounded-full border border-purple-400/30 shadow-[0_0_12px_rgba(168,85,247,0.3)]">
                         Brain · Ketones
                       </motion.span>
                     )}
                   </div>
                   {currentH > 2 && currentH < 24 && (
-                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="absolute top-[28%] right-[2%] text-[0.45rem] font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20 pointer-events-none">
+                    <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                      className="absolute top-[28%] right-[2%] text-[0.5rem] font-black uppercase tracking-widest text-cyan-300 bg-cyan-500/15 px-3 py-1 rounded-full border border-cyan-400/30 shadow-[0_0_12px_rgba(34,211,238,0.3)] pointer-events-none">
                       Liver · {currentH < 12 ? 'Glycogen' : 'Ketogenesis'}
                     </motion.span>
                   )}
                   {currentH > 12 && (
-                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="absolute top-[50%] right-[2%] text-[0.45rem] font-black uppercase tracking-widest text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20 pointer-events-none">
+                    <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                      className="absolute top-[50%] right-[2%] text-[0.5rem] font-black uppercase tracking-widest text-orange-300 bg-orange-500/15 px-3 py-1 rounded-full border border-orange-400/30 shadow-[0_0_12px_rgba(249,115,22,0.3)] pointer-events-none">
                       Fat · Mobilizing
                     </motion.span>
                   )}
                   {currentH > 24 && (
-                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="absolute top-[22%] left-[2%] text-[0.45rem] font-black uppercase tracking-widest text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 pointer-events-none">
+                    <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                      className="absolute top-[22%] left-[2%] text-[0.5rem] font-black uppercase tracking-widest text-red-300 bg-red-500/15 px-3 py-1 rounded-full border border-red-400/30 shadow-[0_0_12px_rgba(239,68,68,0.3)] pointer-events-none">
                       Heart · Ketones
                     </motion.span>
                   )}

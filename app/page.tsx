@@ -1706,14 +1706,14 @@ export default function Home() {
                 const fatIntensity = Math.min(1, (currentH - 10) / 14);
                 const lateBoost = currentH > 24 ? Math.min(1, (currentH - 24) / 24) : 0;
                 const totalFat = Math.min(1, fatIntensity + lateBoost * 0.4);
-                // Origins at hips/butt — particles travel outward and down the front of legs
+                // Origins at hips/butt — particles travel diagonally outward
                 const origins = [
-                  { t: 52, l: 42, dx: -12, dy: 22 },  // left hip → out-left and down
-                  { t: 52, l: 57, dx: 12,  dy: 22 },  // right hip → out-right and down
-                  { t: 54, l: 45, dx: -10, dy: 28 },  // left glute → out-left and down
-                  { t: 54, l: 54, dx: 10,  dy: 28 },  // right glute → out-right and down
-                  { t: 50, l: 40, dx: -14, dy: 18 },  // left love handle → out-left
-                  { t: 50, l: 59, dx: 14,  dy: 18 },  // right love handle → out-right
+                  { t: 52, l: 42, dx: -18, dy: 15 },  // left hip → diagonal out-left
+                  { t: 52, l: 57, dx: 18,  dy: 15 },  // right hip → diagonal out-right
+                  { t: 54, l: 45, dx: -15, dy: 18 },  // left glute → diagonal out-left
+                  { t: 54, l: 54, dx: 15,  dy: 18 },  // right glute → diagonal out-right
+                  { t: 50, l: 40, dx: -20, dy: 10 },  // left love handle → mostly outward
+                  { t: 50, l: 59, dx: 20,  dy: 10 },  // right love handle → mostly outward
                 ];
                 const particlesPerOrigin = currentH > 36 ? 4 : currentH > 24 ? 3 : 2;
                 return (
@@ -1762,27 +1762,31 @@ export default function Home() {
                 );
               })()}
 
-              {/* ── HEART ── deep ketosis fuel (24h+), tight pulsing glow */}
+              {/* ── HEART ── deep ketosis fuel (24h+), grows with fast duration */}
               {(startTime || devMode) && currentH > 20 && (() => {
-                const heartIntensity = Math.min(1, (currentH - 20) / 8);
+                const heartIntensity = Math.min(1, (currentH - 20) / 28); // slower ramp — maxes at 48h
+                const glowSize = 9 + heartIntensity * 6; // 9px → 15px
+                const ringSize = 12 + heartIntensity * 8; // 12px → 20px
                 return (
                   <>
-                    {/* Core heartbeat glow */}
+                    {/* Core heartbeat glow — grows over time */}
                     <motion.div
-                      animate={{ opacity: [heartIntensity * 0.35, heartIntensity * 0.75, heartIntensity * 0.35], scale: [0.92, 1.12, 0.92] }}
+                      animate={{ opacity: [0.3 + heartIntensity * 0.2, 0.6 + heartIntensity * 0.35, 0.3 + heartIntensity * 0.2], scale: [0.92, 1.12, 0.92] }}
                       transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute top-[28%] left-[49%] -translate-x-1/2 w-9 h-9 bg-red-500 blur-lg rounded-full pointer-events-none"
+                      className="absolute top-[28%] left-[49%] -translate-x-1/2 bg-red-500 blur-lg rounded-full pointer-events-none"
+                      style={{ width: glowSize * 4, height: glowSize * 4 }}
                     />
-                    {/* Heartbeat pulse ring */}
+                    {/* Heartbeat pulse ring — grows with it */}
                     <motion.div
-                      animate={{ opacity: [0, heartIntensity * 0.25, 0], scale: [0.8, 1.3, 0.8] }}
+                      animate={{ opacity: [0, 0.15 + heartIntensity * 0.2, 0], scale: [0.8, 1.3, 0.8] }}
                       transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute top-[27.5%] left-[49%] -translate-x-1/2 w-12 h-12 border border-red-400/30 rounded-full pointer-events-none"
+                      className="absolute top-[27.5%] left-[49%] -translate-x-1/2 border border-red-400/30 rounded-full pointer-events-none"
+                      style={{ width: ringSize * 4, height: ringSize * 4 }}
                     />
-                    {/* Blood flow particles */}
-                    {heartIntensity > 0.3 && [0,1,2].map(i => (
+                    {/* Blood flow particles — more at deeper ketosis */}
+                    {[0,1,2, ...(heartIntensity > 0.5 ? [3,4] : [])].map(i => (
                       <motion.div key={`hb-${i}`}
-                        animate={{ opacity: [0, heartIntensity * 0.5, 0], y: [0, 20 + i * 8], scale: [1, 0.4] }}
+                        animate={{ opacity: [0, (0.3 + heartIntensity * 0.4), 0], y: [0, 20 + i * 8], scale: [1, 0.4] }}
                         transition={{ duration: 1.3 + i * 0.3, repeat: Infinity, delay: i * 0.35, ease: 'easeOut' }}
                         className="absolute top-[30%] left-[48%] w-1 h-1 bg-red-300 rounded-full pointer-events-none"
                         style={{ filter: 'blur(0.5px)' }}

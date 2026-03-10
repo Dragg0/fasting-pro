@@ -14,14 +14,20 @@ import { supabase } from "@/lib/supabase";
 function Tooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
   const [show, setShow] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isTouchUi, setIsTouchUi] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 288, arrowLeft: '50%' });
 
   useEffect(() => {
-    const syncMobile = () => setIsMobile(window.innerWidth < 640);
-    syncMobile();
-    window.addEventListener('resize', syncMobile);
-    return () => window.removeEventListener('resize', syncMobile);
+    const syncTouchUi = () => {
+      const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+      const noHover = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+      const touchPoints = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0;
+      const narrow = typeof window !== 'undefined' && window.innerWidth < 900;
+      setIsTouchUi((coarse || noHover || touchPoints) && narrow);
+    };
+    syncTouchUi();
+    window.addEventListener('resize', syncTouchUi);
+    return () => window.removeEventListener('resize', syncTouchUi);
   }, []);
 
   const updatePos = () => {
@@ -39,7 +45,7 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
   };
 
   useEffect(() => {
-    if (show && !isMobile) {
+    if (show && !isTouchUi) {
       updatePos();
       const dismiss = (e: MouseEvent | TouchEvent) => {
         if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) setShow(false);
@@ -55,16 +61,16 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
         document.removeEventListener('mousedown', dismiss);
       };
     }
-  }, [show, isMobile]);
+  }, [show, isTouchUi]);
 
   return (
     <>
-      <div ref={triggerRef} className="relative" onMouseEnter={() => !isMobile && setShow(true)} onMouseLeave={() => !isMobile && setShow(false)}
+      <div ref={triggerRef} className="relative" onMouseEnter={() => !isTouchUi && setShow(true)} onMouseLeave={() => !isTouchUi && setShow(false)}
         onClick={() => setShow(s => !s)}>
         {children}
       </div>
       {show && createPortal(
-        isMobile ? (
+        isTouchUi ? (
           <>
             <div className="fixed inset-0 z-[2147483646] bg-black/60 backdrop-blur-sm" onClick={() => setShow(false)} />
             <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[2147483647] flex justify-center">

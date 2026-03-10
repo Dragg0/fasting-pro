@@ -218,6 +218,7 @@ export default function Home() {
   const [refeedLogged, setRefeedLogged] = useState<RefeedFood[]>([]);
   const [showRefeedSection, setShowRefeedSection] = useState(true);
   const [showEndFastModal, setShowEndFastModal] = useState(false);
+  const [fastHistory, setFastHistory] = useState<{start:string;end:string;hours:number;refeed:{emoji:string;label:string;quality:string}[];streak:number}[]>([]);
 
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -283,6 +284,7 @@ export default function Home() {
       setBadgesEarned(earned);
       if (data.activity_log) { try { setActivityLog(JSON.parse(data.activity_log)); } catch {} }
       if (data.weight_log)   { try { setWeightLog(JSON.parse(data.weight_log)); } catch {} }
+      if (data.fast_history) { try { setFastHistory(JSON.parse(data.fast_history)); } catch {} }
       const accMin = data.accelerant_minutes || 0;
       setBonus(accMin / 60);
       setAccelerantMinutes(accMin);
@@ -410,22 +412,36 @@ export default function Home() {
   };
 
   const endFast = async () => {
-    // Award streak point and save completed fast
     const newStreak = streak + 1;
     const completedH = currentH;
     const newMax = Math.max(maxHoursEver, completedH);
     setStreak(newStreak);
     setMaxHoursEver(newMax);
     const newBadges = checkAndAwardBadges(newMax, newStreak, totalMpEver, activityCount, badgesEarned);
+
+    // Build fast history record
+    const record = {
+      start: startTime?.toISOString() || new Date().toISOString(),
+      end: new Date().toISOString(),
+      hours: parseFloat(completedH.toFixed(1)),
+      refeed: refeedLogged.map(f => ({ emoji: f.emoji, label: f.label, quality: f.quality })),
+      streak: newStreak,
+    };
+    const newHistory = [record, ...fastHistory].slice(0, 30); // keep last 30 fasts
+    setFastHistory(newHistory);
     setShowEndFastModal(false);
+
     // Reset fast state
     setStartTime(null); setElapsed(0); setBonus(0); setAccelerantMinutes(0);
     setActivityLog([]); setWaterCount(0); setElectrolyteCount(0); setRefeedLogged([]);
     goalReachedRef.current = false;
+
     if (session) await supabase.from('profiles').update({
       streak: newStreak, max_hours_ever: newMax, fast_start_time: null,
       accelerant_minutes: 0, activity_log: '[]', water_count: 0, electrolyte_count: 0,
       badges_earned: JSON.stringify(newBadges),
+      fast_history: JSON.stringify(newHistory),
+      last_refeed: refeedLogged.map(f => f.label).join(', '),
     }).eq('id', session.user.id);
   };
 
@@ -926,6 +942,53 @@ export default function Home() {
               )}
             </AnimatePresence>
           </section>
+
+          {/* FAST HISTORY */}
+          {fastHistory.length > 0 && (
+            <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6">
+              <h2 className="text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4 flex items-center gap-2">
+                <Clock className="w-3 h-3 text-purple-500" /> Fast History
+              </h2>
+              <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                {fastHistory.map((record, i) => (
+                  <div key={i} className="bg-black/30 rounded-2xl p-3 border border-white/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="text-white font-black text-sm">{record.hours}h fast</div>
+                        <div className="text-[0.55rem] text-[#4b5563]">
+                          {new Date(record.end).toLocaleDateString([], {month:'short', day:'numeric'})} · Day {record.streak} streak
+                        </div>
+                      </div>
+                      <div className={`text-xs font-black px-2 py-1 rounded-xl border ${
+                        record.hours >= 24 ? 'text-purple-400 border-purple-500/30 bg-purple-500/10' :
+                        record.hours >= 18 ? 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10' :
+                        'text-[#4b5563] border-white/5'
+                      }`}>
+                        {record.hours >= 24 ? '🧬 Deep' : record.hours >= 18 ? '🔥 Ketosis' : '✓ Done'}
+                      </div>
+                    </div>
+                    {record.refeed.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {record.refeed.map((f, j) => (
+                          <span key={j} className={`text-[0.55rem] font-black px-2 py-0.5 rounded-full border ${
+                            f.quality==='excellent' ? 'text-green-400 border-green-500/20 bg-green-500/10' :
+                            f.quality==='good' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' :
+                            f.quality==='fair' ? 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10' :
+                            'text-red-400 border-red-500/20 bg-red-500/10'
+                          }`}>
+                            {f.emoji} {f.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {record.refeed.length === 0 && (
+                      <div className="text-[0.55rem] text-[#4b5563]">No refeed logged</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ACTIVITY LOG */}
           {activityLog.length > 0 && (

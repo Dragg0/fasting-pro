@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Brain, History, LogIn, TrendingUp, PlusCircle, CheckCircle2,
   Flame, Zap, Droplets, Info, Clock, LogOut, Loader2, Trophy, Target, Scale, UtensilsCrossed, ChevronDown
@@ -11,8 +12,11 @@ import { supabase } from "@/lib/supabase";
 // ─── TOOLTIP ────────────────────────────────────────────────────────────────
 function Tooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
   const [show, setShow] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => { setMounted(true); }, []);
 
   const updatePos = () => {
     if (triggerRef.current) {
@@ -27,39 +31,43 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
   useEffect(() => {
     if (show) {
       updatePos();
-      window.addEventListener('scroll', updatePos);
+      window.addEventListener('scroll', updatePos, true);
       window.addEventListener('resize', updatePos);
       return () => {
-        window.removeEventListener('scroll', updatePos);
+        window.removeEventListener('scroll', updatePos, true);
         window.removeEventListener('resize', updatePos);
       };
     }
   }, [show]);
 
+  const tooltip = (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, y: -6, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.95 }}
+          transition={{ duration: 0.15 }}
+          style={{ 
+            position: 'fixed',
+            top: pos.top, 
+            left: pos.left, 
+            transform: 'translateX(-50%) translateY(-100%)',
+            zIndex: 99999
+          }}
+          className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60 pointer-events-none">
+          <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <div ref={triggerRef} className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
       onClick={() => setShow(s => !s)}>
       {children}
-      <AnimatePresence>
-        {show && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            style={{ 
-              position: 'fixed',
-              top: pos.top, 
-              left: pos.left, 
-              transform: 'translateX(-50%) translateY(-100%)',
-              zIndex: 9999 
-            }}
-            className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60 pointer-events-none">
-            <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
-            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {mounted && createPortal(tooltip, document.body)}
     </div>
   );
 }

@@ -1058,20 +1058,23 @@ export default function Home() {
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {MP_ACTIONS.map(({ icon: Icon, color, points, label, science }) => {
-                const tipContent = (
+              {MP_ACTIONS.map(({ icon: Icon, color, points, label, science }) => (
+                <Tooltip key={label} content={
                   <div>
                     <div className={`font-black mb-1 ${color==='cyan' ? 'text-cyan-400' : 'text-purple-400'}`}>+{Math.round(points * streakMultiplier)} pts{streak>=2 ? ` (${streakMultiplier.toFixed(1)}x)`:''}</div>
                     <p>{science}</p>
                   </div>
-                );
-                return (
-                  <MpButton key={label} onTap={() => addMp(points)} tipContent={tipContent} color={color}>
-                    <Icon className={`w-5 h-5 ${color==='cyan'?'text-cyan-400':'text-purple-400'} group-hover:scale-110 transition-transform`} />
+                }>
+                  <div className={`bg-[#0f131c]/60 border ${color==='cyan'?'border-cyan-500/20':'border-purple-500/10'} rounded-3xl p-4 flex flex-col items-center gap-2 cursor-help text-center`}>
+                    <Icon className={`w-5 h-5 ${color==='cyan'?'text-cyan-400':'text-purple-400'}`} />
                     <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">{label}</span>
-                  </MpButton>
-                );
-              })}
+                    <button onClick={(e) => { e.stopPropagation(); addMp(points); }}
+                      className={`w-full ${color==='cyan'?'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20 text-cyan-400':'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 text-purple-400'} border font-black py-2 rounded-xl text-xs transition-all`}>
+                      + Mind
+                    </button>
+                  </div>
+                </Tooltip>
+              ))}
             </div>
           </section>
 

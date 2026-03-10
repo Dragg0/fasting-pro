@@ -15,25 +15,45 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
   const [show, setShow] = useState(false);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 288, arrowLeft: '50%' });
 
   useEffect(() => { setMounted(true); }, []);
 
   const updatePos = () => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
-    }
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const pad = 12;
+    const vw = window.innerWidth;
+    // responsive width: fit within viewport minus padding on each side
+    const tooltipW = Math.min(288, vw - pad * 2);
+    // ideal center of trigger
+    const center = rect.left + rect.width / 2;
+    // clamp tooltip so it stays within viewport
+    const halfW = tooltipW / 2;
+    const clamped = Math.max(pad + halfW, Math.min(vw - pad - halfW, center));
+    // arrow tracks the trigger center relative to the clamped tooltip position
+    const arrowPx = center - (clamped - halfW);
+    const arrowLeft = `${Math.max(16, Math.min(tooltipW - 16, arrowPx))}px`;
+
+    setPos({ top: rect.top - 8, left: clamped, width: tooltipW, arrowLeft });
   };
 
   useEffect(() => {
     if (show) {
       updatePos();
+      // close on any outside tap (mobile)
+      const dismiss = (e: MouseEvent | TouchEvent) => {
+        if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) setShow(false);
+      };
       window.addEventListener('scroll', updatePos, true);
       window.addEventListener('resize', updatePos);
+      document.addEventListener('touchstart', dismiss);
+      document.addEventListener('mousedown', dismiss);
       return () => {
         window.removeEventListener('scroll', updatePos, true);
         window.removeEventListener('resize', updatePos);
+        document.removeEventListener('touchstart', dismiss);
+        document.removeEventListener('mousedown', dismiss);
       };
     }
   }, [show]);
@@ -47,13 +67,15 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
           position: 'fixed',
           top: pos.top,
           left: pos.left,
+          width: pos.width,
           transform: 'translateX(-50%) translateY(-100%)',
           zIndex: 2147483647,
           pointerEvents: 'none',
         }}>
-          <div className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
+          <div className="bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
             <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
-            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
+            <div className="absolute -bottom-1.5 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25"
+              style={{ left: pos.arrowLeft, transform: 'translateX(-50%) rotate(45deg)' }} />
           </div>
         </div>,
         document.body

@@ -320,12 +320,22 @@ const PHASES: Phase[] = [
     science:'Stem cell regeneration pathways activate. IGF-1 drops dramatically. Autophagy peaks — damaged proteins, organelles, and even pathogens are cleared. Re-feeding after this point triggers significant tissue renewal.' }
 ];
 
-const ACTIVITIES = [
-  { emoji:"🚶", label:"Walk",       multiplier:2,   science:"Walking activates GLUT4 transporters in muscle independently of insulin, draining glycogen stores without spiking cortisol. Each minute of walking = 2 min faster entry into fat-burning." },
-  { emoji:"🏃", label:"Run",        multiplier:3,   science:"Running depletes glycogen 3-4x faster than walking via anaerobic glycolysis. The EPOC (excess post-exercise oxygen consumption) effect burns fat for hours after stopping." },
-  { emoji:"🏓", label:"Pickleball", multiplier:2.5, science:"Intermittent high-intensity sport. Fast-twitch muscle recruitment burns glycogen rapidly while recovery periods maintain aerobic fat oxidation — a powerful metabolic combination." },
-  { emoji:"🏋️", label:"Lift",       multiplier:2.5, science:"Resistance training creates glycogen debt that the body repays from fat stores over 24-48h. mTOR activation from lifting is offset during fasting by elevated AMPK, balancing muscle growth with fat loss." },
+type ActivityDef = { emoji: string; label: string; multiplier: number; science: string; custom?: boolean };
+
+const INTENSITY_TIERS: { id: string; label: string; multiplier: number; science: string }[] = [
+  { id: 'light',      label: 'Light',      multiplier: 2,   science: 'Low-intensity movement activates GLUT4 transporters in muscle independently of insulin, draining glycogen stores without spiking cortisol. Each minute = ~2 min faster entry into fat-burning.' },
+  { id: 'moderate',   label: 'Moderate',   multiplier: 2.5, science: 'Moderate-intensity exercise combines aerobic fat oxidation with glycogen depletion. Recovery periods maintain fat burning while active intervals accelerate glycogen clearance.' },
+  { id: 'intense',    label: 'Intense',    multiplier: 3,   science: 'High-intensity exercise depletes glycogen 3-4x faster via anaerobic glycolysis. The EPOC (excess post-exercise oxygen consumption) effect continues burning fat for hours after stopping.' },
+  { id: 'resistance', label: 'Resistance', multiplier: 2.5, science: 'Resistance training creates glycogen debt that the body repays from fat stores over 24-48h. mTOR activation from lifting is offset during fasting by elevated AMPK, balancing muscle growth with fat loss.' },
 ];
+
+const DEFAULT_ACTIVITIES: ActivityDef[] = [
+  { emoji:"🚶", label:"Walk", multiplier:2,   science: INTENSITY_TIERS[0].science },
+  { emoji:"🏃", label:"Run",  multiplier:3,   science: INTENSITY_TIERS[2].science },
+  { emoji:"🏋️", label:"Lift", multiplier:2.5, science: INTENSITY_TIERS[3].science },
+];
+
+const EXERCISE_EMOJIS = ['🏊','🚴','🧘','🏀','🎾','🏓','⚽','🥊','🧗','🏈','⛷️','🤸','🚣','🏇','💃','🛹'];
 
 type Badge = { id: string; emoji: string; name: string; desc: string; threshold: number; type: 'hours'|'streak'|'mp'|'activity'; science: string; };
 const BADGES: Badge[] = [
@@ -438,8 +448,13 @@ export default function Home() {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [pickerValue, setPickerValue] = useState("");
   const [showActivityModal, setShowActivityModal] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState<typeof ACTIVITIES[0] | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityDef | null>(null);
   const [activityMinutes, setActivityMinutes] = useState(30);
+  const [customActivities, setCustomActivities] = useState<ActivityDef[]>([]);
+  const [showAddActivity, setShowAddActivity] = useState(false);
+  const [newActName, setNewActName] = useState('');
+  const [newActEmoji, setNewActEmoji] = useState('🏊');
+  const [newActTier, setNewActTier] = useState('moderate');
   const [showGoalPicker, setShowGoalPicker] = useState(false);
   const [showGoalCelebration, setShowGoalCelebration] = useState(false);
   const [showBadgeCelebration, setShowBadgeCelebration] = useState<Badge | null>(null);
@@ -499,6 +514,7 @@ export default function Home() {
       if (data.weight_log)   { try { setWeightLog(JSON.parse(data.weight_log)); } catch {} }
       if (data.fast_history) { try { setFastHistory(JSON.parse(data.fast_history)); } catch {} }
       if (data.mp_log) { try { setMpLog(JSON.parse(data.mp_log)); } catch {} }
+      if (data.custom_activities) { try { setCustomActivities(JSON.parse(data.custom_activities)); } catch {} }
       const accMin = data.accelerant_minutes || 0;
       setBonus(accMin / 60);
       setAccelerantMinutes(accMin);
@@ -584,8 +600,27 @@ export default function Home() {
     }).eq('id', session.user.id);
   };
 
-  const openActivity = (act: typeof ACTIVITIES[0]) => {
+  const openActivity = (act: ActivityDef) => {
     setSelectedActivity(act); setActivityMinutes(30); setShowActivityModal(true);
+  };
+
+  const allActivities = [...DEFAULT_ACTIVITIES, ...customActivities];
+
+  const saveCustomActivity = async () => {
+    if (!newActName.trim()) return;
+    const tier = INTENSITY_TIERS.find(t => t.id === newActTier) || INTENSITY_TIERS[1];
+    const act: ActivityDef = { emoji: newActEmoji, label: newActName.trim(), multiplier: tier.multiplier, science: tier.science, custom: true };
+    const updated = [...customActivities, act];
+    setCustomActivities(updated);
+    setShowAddActivity(false);
+    setNewActName(''); setNewActEmoji('🏊'); setNewActTier('moderate');
+    if (session) await supabase.from('profiles').update({ custom_activities: JSON.stringify(updated) }).eq('id', session.user.id);
+  };
+
+  const removeCustomActivity = async (label: string) => {
+    const updated = customActivities.filter(a => a.label !== label);
+    setCustomActivities(updated);
+    if (session) await supabase.from('profiles').update({ custom_activities: JSON.stringify(updated) }).eq('id', session.user.id);
   };
 
   const confirmActivity = async () => {
@@ -849,6 +884,53 @@ export default function Home() {
                   className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl">CANCEL</button>
                 <button onClick={confirmActivity}
                   className="flex-1 bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black py-4 rounded-2xl">LOG IT</button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── ADD CUSTOM ACTIVITY MODAL ── */}
+      <AnimatePresence>
+        {showAddActivity && (
+          <>
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              onClick={() => setShowAddActivity(false)}
+              className="fixed inset-0 bg-black/80 z-[100] backdrop-blur-sm" />
+            <motion.div initial={{ opacity:0, scale:0.9, y:20 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.9, y:20 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm bg-[#0f131c] border-2 border-cyan-500/30 rounded-[2.5rem] p-8 z-[101] shadow-2xl">
+              <h2 className="text-2xl font-black text-white mb-4 tracking-tighter">Add Activity</h2>
+
+              <label className="text-[0.65rem] font-black uppercase tracking-widest text-[#98a4bb] mb-2 block">Emoji</label>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {EXERCISE_EMOJIS.map(e => (
+                  <button key={e} onClick={() => setNewActEmoji(e)}
+                    className={`text-xl w-9 h-9 rounded-xl flex items-center justify-center transition-all ${newActEmoji === e ? 'bg-cyan-500/20 border border-cyan-500/50 scale-110' : 'bg-white/5 border border-transparent hover:bg-white/10'}`}>
+                    {e}
+                  </button>
+                ))}
+              </div>
+
+              <label className="text-[0.65rem] font-black uppercase tracking-widest text-[#98a4bb] mb-2 block">Name</label>
+              <input type="text" value={newActName} onChange={e => setNewActName(e.target.value)} placeholder="e.g. Pickleball"
+                maxLength={20}
+                className="w-full bg-black/40 border border-white/10 text-white text-lg font-black rounded-2xl px-4 py-3 focus:outline-none focus:border-cyan-500/50 mb-4" />
+
+              <label className="text-[0.65rem] font-black uppercase tracking-widest text-[#98a4bb] mb-2 block">Intensity</label>
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {INTENSITY_TIERS.map(tier => (
+                  <button key={tier.id} onClick={() => setNewActTier(tier.id)}
+                    className={`py-2.5 rounded-xl text-xs font-black border transition-all ${newActTier === tier.id ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-white/5 border-white/5 text-[#98a4bb]'}`}>
+                    {tier.label} <span className="opacity-50">{tier.multiplier}x</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setShowAddActivity(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl">CANCEL</button>
+                <button onClick={saveCustomActivity} disabled={!newActName.trim()}
+                  className="flex-1 bg-gradient-to-br from-cyan-400 to-blue-600 text-white font-black py-4 rounded-2xl disabled:opacity-30">ADD</button>
               </div>
             </motion.div>
           </>
@@ -1203,11 +1285,12 @@ export default function Home() {
               <h2 className="inline-flex items-center gap-1 text-[0.65rem] uppercase tracking-widest text-[#4b5563] font-black mb-4 cursor-help">Accelerants <Info className="w-3 h-3 opacity-40" /></h2>
             </Tooltip>
             <div className="grid grid-cols-2 gap-3">
-              {ACTIVITIES.map(act => (
+              {allActivities.map(act => (
                 <Tooltip key={act.label} content={
                   <div>
                     <div className="font-black text-cyan-400 mb-1">{act.emoji} {act.label} — {act.multiplier}x</div>
                     <p>{act.science}</p>
+                    {act.custom && <button onClick={() => removeCustomActivity(act.label)} className="mt-2 text-[0.6rem] font-bold text-red-400 hover:text-red-300">Remove activity</button>}
                   </div>
                 }>
                   <button onClick={() => openActivity(act)}
@@ -1216,6 +1299,10 @@ export default function Home() {
                   </button>
                 </Tooltip>
               ))}
+              <button onClick={() => setShowAddActivity(true)}
+                className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-dashed border-white/10 hover:border-cyan-500/30 p-3 rounded-2xl text-[0.65rem] font-bold transition-all text-[#4b5563] hover:text-cyan-400">
+                <PlusCircle className="w-4 h-4" /> ADD ACTIVITY
+              </button>
             </div>
           </section>
 

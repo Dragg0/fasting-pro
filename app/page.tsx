@@ -1704,25 +1704,53 @@ export default function Home() {
               {/* ── FAT / WAIST ── fat mobilization (12h+), intensifies over time */}
               {(startTime || devMode) && currentH > 10 && (() => {
                 const fatIntensity = Math.min(1, (currentH - 10) / 14);
+                const lateBoost = currentH > 24 ? Math.min(1, (currentH - 24) / 24) : 0;
+                const totalFat = Math.min(1, fatIntensity + lateBoost * 0.4);
                 return (
                   <>
-                    {/* Main glow */}
+                    {/* Main waist glow */}
                     <motion.div
-                      animate={{ opacity: [fatIntensity * 0.3, fatIntensity * 0.6, fatIntensity * 0.3], scale: [0.95, 1.08, 0.95] }}
+                      animate={{ opacity: [totalFat * 0.3, totalFat * 0.65, totalFat * 0.3], scale: [0.95, 1.08, 0.95] }}
                       transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                       className="absolute top-[42%] left-1/2 -translate-x-1/2 w-28 h-14 bg-orange-500 blur-2xl rounded-full pointer-events-none"
                     />
                     {/* Secondary pulse ring */}
                     <motion.div
-                      animate={{ opacity: [0.05, fatIntensity * 0.2, 0.05], scale: [0.9, 1.2, 0.9] }}
+                      animate={{ opacity: [0.05, totalFat * 0.25, 0.05], scale: [0.9, 1.2, 0.9] }}
                       transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                       className="absolute top-[40%] left-1/2 -translate-x-1/2 w-36 h-18 bg-orange-400/30 blur-3xl rounded-full pointer-events-none"
                     />
-                    {/* Fat droplet particles dissolving upward */}
-                    {fatIntensity > 0.2 && [0,1,2,3,4,5].map(i => (
+                    {/* Thigh / lower body glow — appears at 16h+, grows with time */}
+                    {currentH > 16 && (() => {
+                      const thighIntensity = Math.min(1, (currentH - 16) / 20);
+                      return (
+                        <>
+                          {/* Left thigh */}
+                          <motion.div
+                            animate={{ opacity: [thighIntensity * 0.15, thighIntensity * 0.4, thighIntensity * 0.15], scale: [0.96, 1.06, 0.96] }}
+                            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                            className="absolute top-[58%] left-[40%] -translate-x-1/2 w-12 h-16 bg-orange-500 blur-2xl rounded-full pointer-events-none"
+                          />
+                          {/* Right thigh */}
+                          <motion.div
+                            animate={{ opacity: [thighIntensity * 0.15, thighIntensity * 0.4, thighIntensity * 0.15], scale: [0.96, 1.06, 0.96] }}
+                            transition={{ duration: 3.5, repeat: Infinity, delay: 0.5, ease: 'easeInOut' }}
+                            className="absolute top-[58%] left-[60%] -translate-x-1/2 w-12 h-16 bg-orange-500 blur-2xl rounded-full pointer-events-none"
+                          />
+                          {/* Glutes glow */}
+                          <motion.div
+                            animate={{ opacity: [thighIntensity * 0.1, thighIntensity * 0.3, thighIntensity * 0.1], scale: [0.97, 1.05, 0.97] }}
+                            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                            className="absolute top-[52%] left-1/2 -translate-x-1/2 w-24 h-10 bg-orange-400 blur-2xl rounded-full pointer-events-none"
+                          />
+                        </>
+                      );
+                    })()}
+                    {/* Fat droplet particles dissolving upward — more particles at higher hours */}
+                    {totalFat > 0.2 && Array.from({length: currentH > 30 ? 8 : currentH > 20 ? 6 : 4}, (_, i) => i).map(i => (
                       <motion.div key={`fd-${i}`}
-                        animate={{ opacity: [0, fatIntensity * 0.6, 0], y: [-5, -35 - i * 6], x: [(i - 2.5) * 8, (i - 2.5) * 12] }}
-                        transition={{ duration: 2.5 + i * 0.3, repeat: Infinity, delay: i * 0.4, ease: 'easeOut' }}
+                        animate={{ opacity: [0, totalFat * 0.7, 0], y: [-5, -40 - i * 6], x: [(i - 3) * 8, (i - 3) * 14] }}
+                        transition={{ duration: 2.2 + i * 0.25, repeat: Infinity, delay: i * 0.35, ease: 'easeOut' }}
                         className="absolute top-[44%] left-[49%] w-1 h-1 bg-orange-300 rounded-full pointer-events-none"
                         style={{ filter: 'blur(0.5px)' }}
                       />
@@ -1740,20 +1768,20 @@ export default function Home() {
                     <motion.div
                       animate={{ opacity: [heartIntensity * 0.3, heartIntensity * 0.7, heartIntensity * 0.3], scale: [0.9, 1.15, 0.9] }}
                       transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute top-[24%] left-[47%] -translate-x-1/2 w-12 h-12 bg-red-500 blur-xl rounded-full pointer-events-none"
+                      className="absolute top-[26%] left-[49%] -translate-x-1/2 w-12 h-12 bg-red-500 blur-xl rounded-full pointer-events-none"
                     />
                     {/* Heartbeat pulse ring */}
                     <motion.div
                       animate={{ opacity: [0, heartIntensity * 0.3, 0], scale: [0.8, 1.4, 0.8] }}
                       transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="absolute top-[23%] left-[47%] -translate-x-1/2 w-16 h-16 border border-red-400/30 rounded-full pointer-events-none"
+                      className="absolute top-[25%] left-[49%] -translate-x-1/2 w-16 h-16 border border-red-400/30 rounded-full pointer-events-none"
                     />
                     {/* Blood flow particles */}
                     {heartIntensity > 0.3 && [0,1,2].map(i => (
                       <motion.div key={`hb-${i}`}
                         animate={{ opacity: [0, heartIntensity * 0.5, 0], y: [0, 25 + i * 10], scale: [1, 0.5] }}
                         transition={{ duration: 1.5 + i * 0.3, repeat: Infinity, delay: i * 0.4, ease: 'easeOut' }}
-                        className="absolute top-[27%] left-[46%] w-1 h-1 bg-red-300 rounded-full pointer-events-none"
+                        className="absolute top-[29%] left-[48%] w-1 h-1 bg-red-300 rounded-full pointer-events-none"
                         style={{ filter: 'blur(0.5px)' }}
                       />
                     ))}
@@ -1761,9 +1789,41 @@ export default function Home() {
                 );
               })()}
 
+              {/* ── AUTOPHAGY ── cellular cleanup (24h+), sparkle/dissolve across body */}
+              {(startTime || devMode) && currentH > 24 && (() => {
+                const autoIntensity = Math.min(1, (currentH - 24) / 24);
+                const sparkleCount = Math.floor(6 + autoIntensity * 10);
+                // Deterministic positions scattered across the body silhouette
+                const positions = [
+                  {t:15,l:48},{t:20,l:43},{t:22,l:55},{t:30,l:40},{t:32,l:58},
+                  {t:38,l:45},{t:40,l:53},{t:45,l:38},{t:46,l:60},{t:52,l:42},
+                  {t:54,l:56},{t:60,l:44},{t:62,l:54},{t:68,l:42},{t:70,l:56},
+                  {t:75,l:40},
+                ];
+                return positions.slice(0, sparkleCount).map((pos, i) => (
+                  <motion.div key={`ap-${i}`}
+                    animate={{
+                      opacity: [0, autoIntensity * 0.8, 0],
+                      scale: [0.5, 1.2, 0],
+                    }}
+                    transition={{ duration: 1.8 + (i % 4) * 0.4, repeat: Infinity, delay: i * 0.3, ease: 'easeInOut' }}
+                    className="absolute w-1 h-1 bg-yellow-200 rounded-full pointer-events-none"
+                    style={{ top: `${pos.t}%`, left: `${pos.l}%`, boxShadow: '0 0 4px rgba(253,224,71,0.6)' }}
+                  />
+                ));
+              })()}
+
               {/* ── ORGAN LABELS ── show which organs are active */}
               {(startTime || devMode) && (
                 <>
+                  {/* Stomach - Digesting */}
+                  {currentH < 6 && (
+                    <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                      className="absolute top-[42%] left-[2%] text-[0.5rem] font-black uppercase tracking-widest text-green-300 bg-green-500/15 px-3 py-1 rounded-full border border-green-400/30 shadow-[0_0_12px_rgba(74,222,128,0.3)] pointer-events-none">
+                      Stomach · Digesting
+                    </motion.span>
+                  )}
+                  {/* Brain - Ketones */}
                   <div className="absolute top-[5%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
                     {currentH > 18 && (
                       <motion.span initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
@@ -1772,22 +1832,32 @@ export default function Home() {
                       </motion.span>
                     )}
                   </div>
+                  {/* Liver - moved down to align with liver glow */}
                   {currentH > 2 && currentH < 24 && (
                     <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
-                      className="absolute top-[28%] right-[2%] text-[0.5rem] font-black uppercase tracking-widest text-cyan-300 bg-cyan-500/15 px-3 py-1 rounded-full border border-cyan-400/30 shadow-[0_0_12px_rgba(34,211,238,0.3)] pointer-events-none">
+                      className="absolute top-[34%] right-[2%] text-[0.5rem] font-black uppercase tracking-widest text-cyan-300 bg-cyan-500/15 px-3 py-1 rounded-full border border-cyan-400/30 shadow-[0_0_12px_rgba(34,211,238,0.3)] pointer-events-none">
                       Liver · {currentH < 12 ? 'Glycogen' : 'Ketogenesis'}
                     </motion.span>
                   )}
+                  {/* Fat - Mobilizing */}
                   {currentH > 12 && (
                     <motion.span initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
                       className="absolute top-[50%] right-[2%] text-[0.5rem] font-black uppercase tracking-widest text-orange-300 bg-orange-500/15 px-3 py-1 rounded-full border border-orange-400/30 shadow-[0_0_12px_rgba(249,115,22,0.3)] pointer-events-none">
                       Fat · Mobilizing
                     </motion.span>
                   )}
+                  {/* Heart - moved down from top-[22%] to top-[26%] */}
                   {currentH > 24 && (
                     <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                      className="absolute top-[22%] left-[2%] text-[0.5rem] font-black uppercase tracking-widest text-red-300 bg-red-500/15 px-3 py-1 rounded-full border border-red-400/30 shadow-[0_0_12px_rgba(239,68,68,0.3)] pointer-events-none">
+                      className="absolute top-[26%] left-[2%] text-[0.5rem] font-black uppercase tracking-widest text-red-300 bg-red-500/15 px-3 py-1 rounded-full border border-red-400/30 shadow-[0_0_12px_rgba(239,68,68,0.3)] pointer-events-none">
                       Heart · Ketones
+                    </motion.span>
+                  )}
+                  {/* Autophagy label */}
+                  {currentH > 24 && (
+                    <motion.span initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                      className="absolute top-[68%] left-1/2 -translate-x-1/2 text-[0.5rem] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/15 px-3 py-1 rounded-full border border-yellow-400/30 shadow-[0_0_12px_rgba(253,224,71,0.3)] pointer-events-none">
+                      Autophagy · Cell Cleanup
                     </motion.span>
                   )}
                 </>

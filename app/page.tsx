@@ -1510,7 +1510,7 @@ export default function Home() {
                 Metabolic Anatomy <span className="text-cyan-500 ml-2">LIVE</span>
               </h2>
               <div className="text-[0.55rem] font-black uppercase tracking-widest text-cyan-400/80">
-                {currentPhase.short}
+                {startTime ? currentPhase.short : ''}
               </div>
             </div>
             <div className="relative w-full max-w-[400px] flex justify-center py-6 z-10">
@@ -1527,7 +1527,7 @@ export default function Home() {
 
               {/* ── BRAIN ── ketone-fueled (18h+), brightness scales with MP */}
               {(() => {
-                const brainActive = currentH > 18;
+                const brainActive = startTime && currentH > 18;
                 const mpGlow = Math.min(1, mp / 200); // scales 0→1 over 200 MP
                 const brainOpacity = brainActive ? 0.4 + mpGlow * 0.5 : mpGlow > 0.1 ? mpGlow * 0.25 : 0;
                 const brainBlur = brainActive ? 'blur-xl' : 'blur-lg';
@@ -1542,7 +1542,7 @@ export default function Home() {
               })()}
 
               {/* ── STOMACH ── digesting (0-4h), fades as digestion ends */}
-              {currentH < 6 && (
+              {startTime && currentH < 6 && (
                 <motion.div
                   animate={{ opacity: [Math.max(0.1, 0.5 - currentH * 0.1), Math.max(0.15, 0.6 - currentH * 0.1)], scale: [0.97, 1.03, 0.97] }}
                   transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -1551,7 +1551,7 @@ export default function Home() {
               )}
 
               {/* ── LIVER ── glycogen depletion (2-18h), peak at 8-12h */}
-              {currentH > 2 && currentH < 24 && (() => {
+              {startTime && currentH > 2 && currentH < 24 && (() => {
                 const liverIntensity = currentH < 8 ? (currentH - 2) / 6 : currentH < 18 ? 1 : Math.max(0, 1 - (currentH - 18) / 6);
                 return (
                   <motion.div
@@ -1563,7 +1563,7 @@ export default function Home() {
               })()}
 
               {/* ── FAT / WAIST ── fat mobilization (12h+), intensifies over time */}
-              {currentH > 10 && (() => {
+              {startTime && currentH > 10 && (() => {
                 const fatIntensity = Math.min(1, (currentH - 10) / 14);
                 return (
                   <motion.div
@@ -1575,7 +1575,7 @@ export default function Home() {
               })()}
 
               {/* ── HEART ── deep ketosis fuel (24h+) */}
-              {currentH > 20 && (() => {
+              {startTime && currentH > 20 && (() => {
                 const heartIntensity = Math.min(1, (currentH - 20) / 8);
                 return (
                   <motion.div
@@ -1587,42 +1587,52 @@ export default function Home() {
               })()}
 
               {/* ── ORGAN LABELS ── show which organs are active */}
-              <div className="absolute top-[8%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
-                {currentH > 18 && (
-                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[0.45rem] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
-                    Brain · Ketones
-                  </motion.span>
-                )}
-              </div>
-              {currentH > 2 && currentH < 24 && (
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="absolute top-[28%] right-[8%] text-[0.45rem] font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20 pointer-events-none">
-                  Liver · {currentH < 12 ? 'Glycogen' : 'Ketogenesis'}
-                </motion.span>
-              )}
-              {currentH > 12 && (
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="absolute top-[50%] right-[8%] text-[0.45rem] font-black uppercase tracking-widest text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20 pointer-events-none">
-                  Fat · Mobilizing
-                </motion.span>
-              )}
-              {currentH > 24 && (
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="absolute top-[22%] left-[8%] text-[0.45rem] font-black uppercase tracking-widest text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 pointer-events-none">
-                  Heart · Ketones
-                </motion.span>
+              {startTime && (
+                <>
+                  <div className="absolute top-[8%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+                    {currentH > 18 && (
+                      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[0.45rem] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                        Brain · Ketones
+                      </motion.span>
+                    )}
+                  </div>
+                  {currentH > 2 && currentH < 24 && (
+                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className="absolute top-[28%] right-[2%] text-[0.45rem] font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20 pointer-events-none">
+                      Liver · {currentH < 12 ? 'Glycogen' : 'Ketogenesis'}
+                    </motion.span>
+                  )}
+                  {currentH > 12 && (
+                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className="absolute top-[50%] right-[2%] text-[0.45rem] font-black uppercase tracking-widest text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20 pointer-events-none">
+                      Fat · Mobilizing
+                    </motion.span>
+                  )}
+                  {currentH > 24 && (
+                    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className="absolute top-[22%] left-[2%] text-[0.45rem] font-black uppercase tracking-widest text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20 pointer-events-none">
+                      Heart · Ketones
+                    </motion.span>
+                  )}
+                </>
               )}
 
               {/* ── PHASE OVERLAY ── */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center pointer-events-none">
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-center pointer-events-none">
                 <motion.div
-                  key={currentPhase.title}
+                  key={startTime ? currentPhase.title : 'idle'}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-black/60 backdrop-blur-sm border border-white/10 rounded-2xl px-4 py-2"
                 >
-                  <div className="text-[0.55rem] font-black uppercase tracking-widest text-white">{currentPhase.title}</div>
-                  <div className="text-[0.45rem] font-bold text-cyan-400">{currentPhase.fuel}</div>
+                  {startTime ? (
+                    <>
+                      <div className="text-[0.55rem] font-black uppercase tracking-widest text-white">{currentPhase.title}</div>
+                      <div className="text-[0.45rem] font-bold text-cyan-400">{currentPhase.fuel}</div>
+                    </>
+                  ) : (
+                    <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#4b5563]">Start a fast to activate</div>
+                  )}
                 </motion.div>
               </div>
             </div>

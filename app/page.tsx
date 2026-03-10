@@ -498,6 +498,7 @@ export default function Home() {
       if (data.activity_log) { try { setActivityLog(JSON.parse(data.activity_log)); } catch {} }
       if (data.weight_log)   { try { setWeightLog(JSON.parse(data.weight_log)); } catch {} }
       if (data.fast_history) { try { setFastHistory(JSON.parse(data.fast_history)); } catch {} }
+      if (data.mp_log) { try { setMpLog(JSON.parse(data.mp_log)); } catch {} }
       const accMin = data.accelerant_minutes || 0;
       setBonus(accMin / 60);
       setAccelerantMinutes(accMin);
@@ -670,10 +671,12 @@ export default function Home() {
 
   const streakMultiplier = Math.min(3, 1 + streak * 0.1);
 
+  const [mpLog, setMpLog] = useState<{ label: string; points: number; time: string }[]>([]);
+  const [showMpLog, setShowMpLog] = useState(false);
   const [undoMp, setUndoMp] = useState<{ points: number; timer: ReturnType<typeof setTimeout> } | null>(null);
 
-  const addMp = async (base: number) => {
-    // clear any pending undo
+  const addMp = async (base: number, label: string) => {
+    // clear any pending undo — commit previous entry
     if (undoMp) clearTimeout(undoMp.timer);
 
     const points = Math.round(base * streakMultiplier);
@@ -681,11 +684,16 @@ export default function Home() {
     setMp(newMp); setTotalMpEver(newTotal);
     const newBadges = checkAndAwardBadges(maxHoursEver, streak, newTotal, activityCount, badgesEarned);
 
+    const entry = { label, points, time: new Date().toISOString() };
+    const newLog = [entry, ...mpLog].slice(0, 50);
+    setMpLog(newLog);
+
     // set undo window — persist to DB only after timeout
     const timer = setTimeout(async () => {
       setUndoMp(null);
       if (session) await supabase.from('profiles').update({
         mind_points: newMp, total_mp_ever: newTotal, badges_earned: JSON.stringify(newBadges),
+        mp_log: JSON.stringify(newLog),
       }).eq('id', session.user.id);
     }, 4000);
 
@@ -699,6 +707,7 @@ export default function Home() {
     const restoredTotal = totalMpEver - undoMp.points;
     setMp(restoredMp);
     setTotalMpEver(restoredTotal);
+    setMpLog(prev => prev.slice(1)); // remove the last entry
     setUndoMp(null);
   };
 
@@ -1071,7 +1080,7 @@ export default function Home() {
                   <div className={`bg-[#0f131c]/60 border ${color==='cyan'?'border-cyan-500/20':'border-purple-500/10'} rounded-3xl p-4 flex flex-col items-center gap-2 cursor-help text-center`}>
                     <Icon className={`w-5 h-5 ${color==='cyan'?'text-cyan-400':'text-purple-400'}`} />
                     <span className="text-[0.6rem] font-black uppercase tracking-tighter text-[#98a4bb]">{label}</span>
-                    <button onClick={(e) => { e.stopPropagation(); addMp(points); }}
+                    <button onClick={(e) => { e.stopPropagation(); addMp(points, label); }}
                       className={`w-full ${color==='cyan'?'bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20 text-cyan-400':'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 text-purple-400'} border font-black py-2 rounded-xl text-xs transition-all`}>
                       + Mind
                     </button>
@@ -1079,6 +1088,41 @@ export default function Home() {
                 </Tooltip>
               ))}
             </div>
+
+            {/* MP LOG */}
+            {mpLog.length > 0 && (
+              <div className="mt-4">
+                <button onClick={() => setShowMpLog(s => !s)}
+                  className="flex items-center gap-1 text-[0.6rem] font-black uppercase tracking-widest text-[#4b5563] hover:text-[#98a4bb] transition-colors">
+                  <History className="w-3 h-3" /> Recent Activity
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showMpLog ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                  {showMpLog && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                      <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                        {mpLog.slice(0, 15).map((entry, i) => {
+                          const d = new Date(entry.time);
+                          const now = new Date();
+                          const isToday = d.toDateString() === now.toDateString();
+                          const isYesterday = d.toDateString() === new Date(now.getTime() - 864e5).toDateString();
+                          const dateLabel = isToday ? 'Today' : isYesterday ? 'Yest' : `${d.getMonth()+1}/${d.getDate()}`;
+                          return (
+                            <div key={i} className="flex items-center justify-between bg-black/20 rounded-xl px-3 py-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[0.55rem] font-bold text-[#4b5563] w-8 shrink-0">{dateLabel}</span>
+                                <span className="text-[0.6rem] font-bold text-[#98a4bb] truncate">{entry.label}</span>
+                              </div>
+                              <span className="text-[0.6rem] font-black text-purple-400 shrink-0 ml-2">+{entry.points}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </section>
 
           {/* HYDRATION */}

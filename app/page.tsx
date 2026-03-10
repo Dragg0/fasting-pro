@@ -523,6 +523,9 @@ export default function Home() {
   const [newActEmoji, setNewActEmoji] = useState('🏊');
   const [newActTier, setNewActTier] = useState('moderate');
   const [showGoalPicker, setShowGoalPicker] = useState(false);
+  const [devMode, setDevMode] = useState(false);
+  const isDev = session?.user?.email === 'drjmpdds@gmail.com';
+  const devLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showGoalCelebration, setShowGoalCelebration] = useState(false);
   const [showBadgeCelebration, setShowBadgeCelebration] = useState<Badge | null>(null);
   const goalReachedRef = useRef(false);
@@ -1776,21 +1779,26 @@ export default function Home() {
 
           {/* ── REFEED PROTOCOL ── */}
           {(() => {
-            const guidance = getRefeedGuidance(currentH);
-            const state = goalProgress < 75 ? 'locked' : goalProgress < 100 ? 'approaching' : 'ready';
+            const guidance = getRefeedGuidance(devMode ? 24 : currentH);
+            const state = devMode ? 'ready' : goalProgress < 75 ? 'locked' : goalProgress < 100 ? 'approaching' : 'ready';
             return (
               <section className={`border rounded-[2.5rem] p-8 transition-all ${state==='ready' ? 'bg-green-500/5 border-green-500/20' : state==='approaching' ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-white/[0.02] border-white/5'}`}>
-                <button onClick={() => setShowRefeedSection(s => !s)}
+                <button
+                  onClick={() => setShowRefeedSection(s => !s)}
+                  onTouchStart={() => { if (isDev) devLongPressRef.current = setTimeout(() => { setDevMode(d => !d); }, 800); }}
+                  onTouchEnd={() => { if (devLongPressRef.current) clearTimeout(devLongPressRef.current); }}
+                  onMouseDown={() => { if (isDev) devLongPressRef.current = setTimeout(() => { setDevMode(d => !d); }, 800); }}
+                  onMouseUp={() => { if (devLongPressRef.current) clearTimeout(devLongPressRef.current); }}
                   className="w-full flex items-center justify-between mb-0">
                   <h2 className="text-[0.65rem] uppercase tracking-[0.2em] font-black flex items-center gap-2
                     ${state==='ready'?'text-green-400':state==='approaching'?'text-yellow-400':'text-[#4b5563]'}">
                     <UtensilsCrossed className={`w-4 h-4 ${state==='ready'?'text-green-400':state==='approaching'?'text-yellow-400':'text-[#4b5563]'}`} />
                     <span className={state==='ready'?'text-green-400':state==='approaching'?'text-yellow-400':'text-[#4b5563]'}>
-                      Refeed Protocol
+                      Refeed Protocol {devMode && <span className="text-[0.5rem] text-purple-400 ml-1">DEV</span>}
                     </span>
                     {state==='locked' && <span className="text-[0.55rem] text-[#4b5563] ml-1">— unlocks at {Math.round(goalHours*0.75)}h</span>}
                     {state==='approaching' && <span className="text-[0.55rem] text-yellow-500 ml-1">— approaching goal</span>}
-                    {state==='ready' && <span className="text-[0.55rem] text-green-500 ml-1">— READY TO BREAK</span>}
+                    {state==='ready' && !devMode && <span className="text-[0.55rem] text-green-500 ml-1">— READY TO BREAK</span>}
                   </h2>
                   <ChevronDown className={`w-4 h-4 text-[#4b5563] transition-transform ${showRefeedSection?'rotate-180':''}`} />
                 </button>

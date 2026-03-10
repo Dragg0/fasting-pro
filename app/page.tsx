@@ -1149,6 +1149,7 @@ export default function Home() {
                 <div>
                   <div className="font-black text-cyan-400 mb-1">💧 Water</div>
                   <p>Fasting increases urination and electrolyte loss. Dehydration mimics hunger — many "hunger pangs" at hour 4-8 are actually thirst. Aim for 8+ glasses. Cold water can slightly boost metabolism via thermogenesis.</p>
+                  <p className="mt-2 text-purple-300 font-bold">+5 Mind Points per glass logged.</p>
                 </div>
               }>
                 <div className="bg-black/30 border border-cyan-500/10 rounded-2xl p-4 flex flex-col items-center gap-2 cursor-help">
@@ -1157,7 +1158,7 @@ export default function Home() {
                   <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#4b5563]">glasses</div>
                   <button onClick={(e) => { e.stopPropagation(); logWater(); }}
                     className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 font-black py-2 rounded-xl text-xs transition-all">
-                    + Water <span className="text-purple-400 opacity-60">+5 MP</span>
+                    + Water
                   </button>
                 </div>
               </Tooltip>
@@ -1165,6 +1166,7 @@ export default function Home() {
                 <div>
                   <div className="font-black text-orange-400 mb-1">⚡ Electrolytes</div>
                   <p>Sodium, potassium, and magnesium are lost faster during fasting due to lower insulin (which normally causes retention). Low electrolytes cause "keto flu": headache, fatigue, muscle cramps. Salt your water or use a supplement.</p>
+                  <p className="mt-2 text-purple-300 font-bold">+5 Mind Points per serving logged.</p>
                 </div>
               }>
                 <div className="bg-black/30 border border-orange-500/10 rounded-2xl p-4 flex flex-col items-center gap-2 cursor-help">
@@ -1173,7 +1175,7 @@ export default function Home() {
                   <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#4b5563]">servings</div>
                   <button onClick={(e) => { e.stopPropagation(); logElectrolyte(); }}
                     className="w-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 font-black py-2 rounded-xl text-xs transition-all">
-                    + Electrolytes <span className="text-purple-400 opacity-60">+5 MP</span>
+                    + Electrolytes
                   </button>
                 </div>
               </Tooltip>

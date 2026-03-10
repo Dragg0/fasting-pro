@@ -215,7 +215,7 @@ export default function Home() {
   const [weightLog, setWeightLog] = useState<{weight:number;ts:string}[]>([]);
   const [weightInput, setWeightInput] = useState("");
   const [showWeightInput, setShowWeightInput] = useState(false);
-  const [refeedLogged, setRefeedLogged] = useState<RefeedFood | null>(null);
+  const [refeedLogged, setRefeedLogged] = useState<RefeedFood[]>([]);
   const [showRefeedSection, setShowRefeedSection] = useState(true);
   const [showEndFastModal, setShowEndFastModal] = useState(false);
 
@@ -402,7 +402,10 @@ export default function Home() {
   const triggerScan = () => { setShowScanner(true); setTimeout(() => setShowScanner(false), 2000); };
 
   const logRefeed = async (food: RefeedFood) => {
-    setRefeedLogged(food);
+    setRefeedLogged(prev => {
+      const isSelected = prev.some(f => f.label === food.label);
+      return isSelected ? prev.filter(f => f.label !== food.label) : [...prev, food];
+    });
     if (session) await supabase.from('profiles').update({ last_refeed: food.label }).eq('id', session.user.id);
   };
 
@@ -417,7 +420,7 @@ export default function Home() {
     setShowEndFastModal(false);
     // Reset fast state
     setStartTime(null); setElapsed(0); setBonus(0); setAccelerantMinutes(0);
-    setActivityLog([]); setWaterCount(0); setElectrolyteCount(0); setRefeedLogged(null);
+    setActivityLog([]); setWaterCount(0); setElectrolyteCount(0); setRefeedLogged([]);
     goalReachedRef.current = false;
     if (session) await supabase.from('profiles').update({
       streak: newStreak, max_hours_ever: newMax, fast_start_time: null,
@@ -472,8 +475,8 @@ export default function Home() {
               <div className="text-5xl mb-4">🏁</div>
               <h2 className="text-2xl font-black text-white mb-2 tracking-tighter">End Your Fast?</h2>
               <p className="text-[#98a4bb] text-sm mb-2">You've gone <span className="text-white font-black">{currentH.toFixed(1)}h</span> — that's a {streak+1}-day streak.</p>
-              {!refeedLogged && <p className="text-yellow-400 text-xs mb-6 font-bold">💡 Tip: Log your refeed below before ending for best tracking.</p>}
-              {refeedLogged && <p className="text-green-400 text-xs mb-6 font-bold">✓ Refeed logged: {refeedLogged.emoji} {refeedLogged.label}</p>}
+              {refeedLogged.length === 0 && <p className="text-yellow-400 text-xs mb-6 font-bold">💡 Tip: Log your refeed below before ending for best tracking.</p>}
+              {refeedLogged.length > 0 && <p className="text-green-400 text-xs mb-6 font-bold">✓ Logged: {refeedLogged.map(f => `${f.emoji} ${f.label}`).join(', ')}</p>}
               <div className="flex gap-3">
                 <button onClick={() => setShowEndFastModal(false)}
                   className="flex-1 bg-white/5 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl">KEEP GOING</button>
@@ -1091,10 +1094,10 @@ export default function Home() {
                                     <button
                                       onClick={() => state==='ready' && logRefeed(food)}
                                       className={`w-full p-2.5 rounded-2xl border transition-all text-center
-                                        ${refeedLogged?.label===food.label ? QUALITY_COLORS[food.quality] :
+                                        ${refeedLogged.some(f=>f.label===food.label) ? QUALITY_COLORS[food.quality] :
                                           state==='ready' ? 'bg-white/5 border-white/10 hover:'+QUALITY_COLORS[food.quality]+' cursor-pointer' :
                                           'bg-white/[0.02] border-white/5 opacity-50 cursor-default'}`}>
-                                      <div className={`transition-transform ${refeedLogged?.label===food.label ? 'scale-105' : ''}`}>
+                                      <div className={`transition-transform ${refeedLogged.some(f=>f.label===food.label) ? 'scale-105' : ''}`}>
                                         <div className="text-xl">{food.emoji}</div>
                                         <div className="text-[0.5rem] font-black text-[#98a4bb] leading-tight">{food.label}</div>
                                         <div className={`text-[0.5rem] font-black ${food.nextFastBonus.startsWith('+') ? 'text-green-400' : food.nextFastBonus==='+0h'?'text-cyan-400':'text-red-400'}`}>
@@ -1108,18 +1111,27 @@ export default function Home() {
                             </div>
 
                             {/* Next fast impact summary */}
-                            {refeedLogged && (
+                            {refeedLogged.length > 0 && (
                               <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
                                 className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 mb-4">
-                                <div className="text-[0.6rem] font-black uppercase tracking-widest text-purple-400 mb-2">⚡ Impact on Your Next Fast</div>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-lg">{refeedLogged.emoji}</span>
-                                  <span className="text-white font-black text-sm">{refeedLogged.label}</span>
-                                  <span className={`text-xs font-black ml-auto px-2 py-0.5 rounded-full border ${QUALITY_COLORS[refeedLogged.quality]}`}>
-                                    {refeedLogged.quality}
-                                  </span>
+                                <div className="text-[0.6rem] font-black uppercase tracking-widest text-purple-400 mb-3">⚡ Impact on Your Next Fast</div>
+                                <div className="space-y-3">
+                                  {refeedLogged.map(food => (
+                                    <div key={food.label}>
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-base">{food.emoji}</span>
+                                        <span className="text-white font-black text-xs">{food.label}</span>
+                                        <span className={`text-[0.55rem] font-black ml-auto px-2 py-0.5 rounded-full border ${QUALITY_COLORS[food.quality]}`}>
+                                          {food.quality}
+                                        </span>
+                                      </div>
+                                      <p className="text-[0.6rem] text-purple-100 leading-relaxed">{food.nextFastImpact}</p>
+                                      {refeedLogged.indexOf(food) < refeedLogged.length - 1 && (
+                                        <div className="border-t border-purple-500/10 mt-2" />
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
-                                <p className="text-[0.65rem] text-purple-100 leading-relaxed">{refeedLogged.nextFastImpact}</p>
                               </motion.div>
                             )}
 

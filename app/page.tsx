@@ -24,7 +24,7 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setPos({
-        top: rect.top - 12,
+        top: rect.top - 8,
         left: rect.left + rect.width / 2,
       });
     }
@@ -45,21 +45,26 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
   const tooltip = (
     <AnimatePresence>
       {show && (
-        <motion.div
-          initial={{ opacity: 0, y: -6, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -6, scale: 0.95 }}
-          transition={{ duration: 0.15 }}
-          style={{ 
-            position: 'absolute',
-            top: pos.top,
-            left: pos.left,
-            transform: 'translateX(-50%) translateY(-100%)',
-          }}
-          className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60 pointer-events-none">
-          <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
-          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
-        </motion.div>
+        // position:fixed wrapper — uses viewport coords directly, immune to any parent stacking/transform
+        // Framer Motion only animates opacity/scale on inner div, never touches outer transform
+        <div style={{
+          position: 'fixed',
+          top: pos.top,
+          left: pos.left,
+          transform: 'translateX(-50%) translateY(-100%)',
+          zIndex: 2147483647,
+          pointerEvents: 'none',
+        }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
+            <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
+            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );

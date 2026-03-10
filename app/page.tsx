@@ -413,24 +413,29 @@ const BADGES: Badge[] = [
 
 const GOAL_OPTIONS = [14, 16, 18, 20, 24, 36, 48];
 
-type RefeedFood = { emoji: string; label: string; quality: 'excellent'|'good'|'fair'|'avoid'; nextFastBonus: string; insulin: string; science: string; nextFastImpact: string; };
+type RefeedFood = { emoji: string; label: string; quality: 'excellent'|'good'|'fair'|'high-impact'; nextFastBonus: string; insulin: string; science: string; nextFastImpact: string; };
 const REFEED_FOODS: RefeedFood[] = [
-  { emoji:'🍲', label:'Bone Broth',   quality:'excellent', nextFastBonus:'+1-2h',  insulin:'none',     science:'Zero insulin response. Electrolytes, collagen, and gelatin gently prime the gut without triggering digestion enzymes. The gold standard refeed.',                nextFastImpact:'Your electrolytes reset cleanly. Next fast will feel easier to start — hunger is blunted and gut is settled.' },
-  { emoji:'🥚', label:'Eggs',         quality:'excellent', nextFastBonus:'+1h',    insulin:'minimal',  science:'High protein, near-zero carb. Minimal insulin response (~2-3 mU/L). Leucine content triggers muscle protein synthesis without refilling glycogen.',          nextFastImpact:'Glycogen stays low. Fat-burning enzymes remain active. Your next fast enters ketosis ~2h faster.' },
-  { emoji:'🥑', label:'Avocado',      quality:'excellent', nextFastBonus:'+1h',    insulin:'minimal',  science:'Monounsaturated fat with minimal carbs. Essentially zero insulin response. Provides satiety without disrupting the ketogenic state.',                        nextFastImpact:'Ketones may remain measurable through the night. Next morning fast starts from a fat-adapted baseline.' },
-  { emoji:'🍗', label:'Protein',      quality:'good',      nextFastBonus:'+0.5h',  insulin:'moderate', science:'Protein triggers some insulin (via amino acids), but far less than carbs. Glucagon also rises, partially offsetting fat storage. Net effect: muscle is protected, glycogen stays low.', nextFastImpact:'Modest glycogen replenishment. Next fast needs ~1h extra to clear glycogen before entering fat burning.' },
-  { emoji:'🥗', label:'Salad',        quality:'good',      nextFastBonus:'+0.5h',  insulin:'low',      science:'Fiber slows any glucose absorption dramatically. Low-calorie density means low insulin. Adding protein or fat dressing improves the response further.',      nextFastImpact:'Gut microbiome gets fiber; next fast morning gut motility is better. Mild glycogen refill only.' },
-  { emoji:'🍌', label:'Fruit',        quality:'fair',      nextFastBonus:'-0.5h',  insulin:'moderate', science:'Fructose is processed by the liver (not muscles), which can partially refill liver glycogen — the exact store your fast depleted. Insulin spike is moderate.', nextFastImpact:'Liver glycogen partially refilled. Next fast takes 1-2h longer to reach fat-burning phase.' },
-  { emoji:'🍚', label:'Rice/Carbs',   quality:'fair',      nextFastBonus:'-1h',    insulin:'high',     science:'High-glycemic carbs spike insulin strongly (~60-80 mU/L). Muscle and liver glycogen refill rapidly. Fat oxidation is suppressed for 3-4h post-meal.',      nextFastImpact:'Full glycogen reload. Next fast requires 4-6h longer to work through glycogen before fat burning begins.' },
-  { emoji:'🍕', label:'Full Meal',    quality:'avoid',     nextFastBonus:'-2h',    insulin:'very high',science:'Mixed macros create a large, sustained insulin response. Glycogen fills completely, triglycerides rise. All fat-burning mechanisms fully suppressed for 4-6h.',  nextFastImpact:'Complete metabolic reset. Next fast essentially starts from zero — no residual fat-adapted benefit carries over.' },
-  { emoji:'🍫', label:'Sugar',        quality:'avoid',     nextFastBonus:'-3h',    insulin:'extreme',  science:'Pure glucose/fructose — maximal insulin spike. Dopamine surge creates cravings within hours. This is the worst possible refeed choice after a meaningful fast.', nextFastImpact:'Worst outcome: insulin spike triggers fat storage, glycogen overfills, and cravings make starting the next fast significantly harder.' },
+  { emoji:'🍲', label:'Bone Broth',   quality:'excellent',    nextFastBonus:'+1-2h',  insulin:'none',     science:'Zero insulin response. Electrolytes, collagen, and gelatin gently prime the gut without triggering digestion enzymes. The gold standard refeed.',                nextFastImpact:'Your electrolytes reset cleanly. Next fast will feel easier to start — hunger is blunted and gut is settled.' },
+  { emoji:'🥚', label:'Eggs',         quality:'excellent',    nextFastBonus:'+1h',    insulin:'minimal',  science:'High protein, near-zero carb. Minimal insulin response (~2-3 mU/L). Leucine content triggers muscle protein synthesis without refilling glycogen.',          nextFastImpact:'Glycogen stays low. Fat-burning enzymes remain active. Your next fast enters ketosis ~2h faster.' },
+  { emoji:'🥑', label:'Avocado',      quality:'excellent',    nextFastBonus:'+1h',    insulin:'minimal',  science:'Monounsaturated fat with minimal carbs. Essentially zero insulin response. Provides satiety without disrupting the ketogenic state.',                        nextFastImpact:'Ketones may remain measurable through the night. Next morning fast starts from a fat-adapted baseline.' },
+  { emoji:'🐟', label:'Fish',         quality:'excellent',    nextFastBonus:'+1h',    insulin:'minimal',  science:'Omega-3 rich, high protein, near-zero carb. Fish oil actively reduces inflammation markers (CRP, IL-6) that fasting elevated. The amino acid profile supports muscle repair without glycogen refill.', nextFastImpact:'Anti-inflammatory omega-3s compound with fasting benefits. Next fast starts with lower baseline inflammation and intact fat-burning enzymes.' },
+  { emoji:'🍗', label:'Protein',      quality:'good',         nextFastBonus:'+0.5h',  insulin:'moderate', science:'Protein triggers some insulin (via amino acids), but far less than carbs. Glucagon also rises, partially offsetting fat storage. Net effect: muscle is protected, glycogen stays low.', nextFastImpact:'Modest glycogen replenishment. Next fast needs ~1h extra to clear glycogen before entering fat burning.' },
+  { emoji:'🥗', label:'Salad',        quality:'good',         nextFastBonus:'+0.5h',  insulin:'low',      science:'Fiber slows any glucose absorption dramatically. Low-calorie density means low insulin. Adding protein or fat dressing improves the response further.',      nextFastImpact:'Gut microbiome gets fiber; next fast morning gut motility is better. Mild glycogen refill only.' },
+  { emoji:'🥜', label:'Nuts',         quality:'good',         nextFastBonus:'+0.5h',  insulin:'low',      science:'High fat, moderate protein, low carb. Slow digestion means sustained energy without a glucose spike. Magnesium content helps replenish fasting-depleted stores.',  nextFastImpact:'Minimal glycogen refill. Healthy fats keep fat-oxidation enzymes active. Next fast transitions to fat-burning faster.' },
+  { emoji:'🥛', label:'Yogurt',       quality:'good',         nextFastBonus:'+0.5h',  insulin:'low-mod',  science:'Fermented dairy has lower lactose (less sugar) than milk. Probiotics support gut microbiome recovery after fasting. Protein content triggers moderate satiety without heavy glycogen refill.',  nextFastImpact:'Gut microbiome gets a probiotic boost. Next fast may have less bloating and better gut motility.' },
+  { emoji:'🍌', label:'Fruit',        quality:'fair',         nextFastBonus:'-0.5h',  insulin:'moderate', science:'Fructose is processed by the liver (not muscles), which can partially refill liver glycogen — the exact store your fast depleted. Insulin spike is moderate.', nextFastImpact:'Liver glycogen partially refilled. Next fast takes 1-2h longer to reach fat-burning phase.' },
+  { emoji:'🍚', label:'Rice/Carbs',   quality:'fair',         nextFastBonus:'-1h',    insulin:'high',     science:'High-glycemic carbs spike insulin strongly (~60-80 mU/L). Muscle and liver glycogen refill rapidly. Fat oxidation is suppressed for 3-4h post-meal.',      nextFastImpact:'Full glycogen reload. Next fast requires 4-6h longer to work through glycogen before fat burning begins.' },
+  { emoji:'🍕', label:'Full Meal',    quality:'high-impact',  nextFastBonus:'-2h',    insulin:'very high',science:'Mixed macros create a large, sustained insulin response. Glycogen fills completely, triglycerides rise. All fat-burning mechanisms fully suppressed for 4-6h.',  nextFastImpact:'Complete metabolic reset. Next fast essentially starts from zero — no residual fat-adapted benefit carries over.' },
+  { emoji:'🍫', label:'Sugar/Sweets', quality:'high-impact',  nextFastBonus:'-3h',    insulin:'extreme',  science:'Pure glucose/fructose — maximal insulin spike. Dopamine surge creates cravings within hours. This undoes much of the metabolic benefit of your fast.', nextFastImpact:'Insulin spike triggers fat storage, glycogen overfills, and cravings make starting the next fast significantly harder.' },
 ];
 
+const REFEED_MP: Record<string, number> = { excellent: 15, good: 10, fair: 5, 'high-impact': 0 };
+
 const QUALITY_COLORS: Record<string, string> = {
-  excellent: 'border-green-500/40 bg-green-500/10 text-green-300',
-  good:      'border-cyan-500/30  bg-cyan-500/10  text-cyan-300',
-  fair:      'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
-  avoid:     'border-red-500/30   bg-red-500/10   text-red-300',
+  excellent:      'border-green-500/40 bg-green-500/10 text-green-300',
+  good:           'border-cyan-500/30  bg-cyan-500/10  text-cyan-300',
+  fair:           'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
+  'high-impact':  'border-red-500/30   bg-red-500/10   text-red-300',
 };
 
 const getRefeedGuidance = (hours: number) => {
@@ -795,10 +800,26 @@ export default function Home() {
   const triggerScan = () => { setShowScanner(true); setTimeout(() => setShowScanner(false), 2000); };
 
   const logRefeed = async (food: RefeedFood) => {
-    setRefeedLogged(prev => {
-      const isSelected = prev.some(f => f.label === food.label);
-      return isSelected ? prev.filter(f => f.label !== food.label) : [...prev, food];
-    });
+    const isSelected = refeedLogged.some(f => f.label === food.label);
+    if (isSelected) {
+      setRefeedLogged(prev => prev.filter(f => f.label !== food.label));
+    } else {
+      setRefeedLogged(prev => [...prev, food]);
+      // Award MP for good refeed choices
+      const pts = REFEED_MP[food.quality] || 0;
+      if (pts > 0) {
+        const points = Math.round(pts * streakMultiplier);
+        const newMp = mp + points, newTotal = totalMpEver + points;
+        setMp(newMp); setTotalMpEver(newTotal);
+        const entry = { label: `Refeed: ${food.label}`, points, time: new Date().toISOString() };
+        const newLog = [entry, ...mpLog].slice(0, 50);
+        setMpLog(newLog);
+        if (session) await supabase.from('profiles').update({
+          last_refeed: food.label, mind_points: newMp, total_mp_ever: newTotal, mp_log: JSON.stringify(newLog),
+        }).eq('id', session.user.id);
+        return;
+      }
+    }
     if (session) await supabase.from('profiles').update({ last_refeed: food.label }).eq('id', session.user.id);
   };
 
@@ -1809,13 +1830,14 @@ export default function Home() {
                               <div className="text-[0.6rem] font-black uppercase tracking-widest text-[#4b5563] mb-3">
                                 {state==='ready' ? '📋 Log your refeed — tap to select' : '👀 Preview your options'}
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                 {REFEED_FOODS.map(food => (
                                   <Tooltip key={food.label} content={
                                     <div>
                                       <div className="font-black text-white mb-1">{food.emoji} {food.label}</div>
                                       <div className={`text-[0.6rem] font-black uppercase mb-2 ${food.quality==='excellent'?'text-green-400':food.quality==='good'?'text-cyan-400':food.quality==='fair'?'text-yellow-400':'text-red-400'}`}>
                                         Insulin: {food.insulin} · Next fast: {food.nextFastBonus}
+                                        {REFEED_MP[food.quality] > 0 && <span className="text-purple-400 ml-1">· +{REFEED_MP[food.quality]} MP</span>}
                                       </div>
                                       <p className="text-[0.65rem] mb-2">{food.science}</p>
                                       <div className="border-t border-white/10 pt-2">

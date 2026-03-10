@@ -13,35 +13,34 @@ import { supabase } from "@/lib/supabase";
 // Pure CSS transitions — no Framer Motion, no stacking context traps
 function Tooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
   const [show, setShow] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 288, arrowLeft: '50%' });
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const syncMobile = () => setIsMobile(window.innerWidth < 640);
+    syncMobile();
+    window.addEventListener('resize', syncMobile);
+    return () => window.removeEventListener('resize', syncMobile);
+  }, []);
 
   const updatePos = () => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const pad = 12;
     const vw = window.innerWidth;
-    const isMobile = vw < 640;
-    // slightly narrower tooltip on phones so it doesn't feel pushed off-center
-    const tooltipW = isMobile ? Math.min(260, vw - pad * 2) : Math.min(288, vw - pad * 2);
+    const tooltipW = Math.min(288, vw - pad * 2);
     const center = rect.left + rect.width / 2;
     const halfW = tooltipW / 2;
     const clamped = Math.max(pad + halfW, Math.min(vw - pad - halfW, center));
     const arrowPx = center - (clamped - halfW);
     const arrowLeft = `${Math.max(16, Math.min(tooltipW - 16, arrowPx))}px`;
-    // give a little more vertical clearance above the trigger on mobile
-    const top = isMobile ? rect.top - 12 : rect.top - 8;
-
-    setPos({ top, left: clamped, width: tooltipW, arrowLeft });
+    setPos({ top: rect.top - 8, left: clamped, width: tooltipW, arrowLeft });
   };
 
   useEffect(() => {
-    if (show) {
+    if (show && !isMobile) {
       updatePos();
-      // close on any outside tap (mobile)
       const dismiss = (e: MouseEvent | TouchEvent) => {
         if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) setShow(false);
       };
@@ -56,31 +55,50 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
         document.removeEventListener('mousedown', dismiss);
       };
     }
-  }, [show]);
+  }, [show, isMobile]);
 
   return (
-    <div ref={triggerRef} className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
-      onClick={() => setShow(s => !s)}>
-      {children}
-      {mounted && show && createPortal(
-        <div style={{
-          position: 'fixed',
-          top: pos.top,
-          left: pos.left,
-          width: pos.width,
-          transform: 'translateX(-50%) translateY(-100%)',
-          zIndex: 2147483647,
-          pointerEvents: 'none',
-        }}>
-          <div className="relative bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
-            <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
-            <div className="absolute -bottom-1.5 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25"
-              style={{ left: pos.arrowLeft, transform: 'translateX(-50%) rotate(45deg)' }} />
+    <>
+      <div ref={triggerRef} className="relative" onMouseEnter={() => !isMobile && setShow(true)} onMouseLeave={() => !isMobile && setShow(false)}
+        onClick={() => setShow(s => !s)}>
+        {children}
+      </div>
+      {show && createPortal(
+        isMobile ? (
+          <>
+            <div className="fixed inset-0 z-[2147483646] bg-black/60 backdrop-blur-sm" onClick={() => setShow(false)} />
+            <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[2147483647]">
+              <div className="relative rounded-3xl border border-cyan-500/25 bg-[#0c1018] p-5 shadow-2xl shadow-black/70">
+                <button
+                  onClick={() => setShow(false)}
+                  className="absolute right-3 top-3 text-sm font-black text-[#98a4bb] hover:text-white"
+                >
+                  ✕
+                </button>
+                <div className="pr-6 text-sm text-[#c8d4e8] leading-relaxed">{content}</div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            transform: 'translateX(-50%) translateY(-100%)',
+            zIndex: 2147483647,
+            pointerEvents: 'none',
+          }}>
+            <div className="relative bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
+              <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
+              <div className="absolute -bottom-1.5 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25"
+                style={{ left: pos.arrowLeft, transform: 'translateX(-50%) rotate(45deg)' }} />
+            </div>
           </div>
-        </div>,
+        ),
         document.body
       )}
-    </div>
+    </>
   );
 }
 

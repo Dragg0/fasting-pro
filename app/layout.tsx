@@ -57,8 +57,6 @@ export default function RootLayout({
         <main className="relative z-10 max-w-[1400px] mx-auto p-6 md:p-8">
           {children}
         </main>
-        {/* Tooltip portal root — always on top of everything */}
-        <div id="tooltip-root" style={{ position: 'fixed', inset: 0, zIndex: 2147483647, pointerEvents: 'none' }} />
       </body>
     </html>
   );

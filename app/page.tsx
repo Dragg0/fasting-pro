@@ -10,23 +10,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 
 // ─── TOOLTIP ────────────────────────────────────────────────────────────────
+// Pure CSS transitions — no Framer Motion, no stacking context traps
 function Tooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
   const [show, setShow] = useState(false);
-  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
-  useEffect(() => {
-    setPortalRoot(document.getElementById('tooltip-root'));
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   const updatePos = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setPos({
-        top: rect.top - 8,
-        left: rect.left + rect.width / 2,
-      });
+      setPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
     }
   };
 
@@ -42,11 +38,11 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
     }
   }, [show]);
 
-  const tooltip = (
-    <AnimatePresence>
-      {show && (
-        // position:fixed wrapper — uses viewport coords directly, immune to any parent stacking/transform
-        // Framer Motion only animates opacity/scale on inner div, never touches outer transform
+  return (
+    <div ref={triggerRef} className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
+      onClick={() => setShow(s => !s)}>
+      {children}
+      {mounted && show && createPortal(
         <div style={{
           position: 'fixed',
           top: pos.top,
@@ -55,25 +51,13 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
           zIndex: 2147483647,
           pointerEvents: 'none',
         }}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
+          <div className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
             <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
             <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25 rotate-45" />
-          </motion.div>
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
-    </AnimatePresence>
-  );
-
-  return (
-    <div ref={triggerRef} className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
-      onClick={() => setShow(s => !s)}>
-      {children}
-      {portalRoot && createPortal(tooltip, portalRoot)}
     </div>
   );
 }

@@ -24,18 +24,18 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
     const rect = triggerRef.current.getBoundingClientRect();
     const pad = 12;
     const vw = window.innerWidth;
-    // responsive width: fit within viewport minus padding on each side
-    const tooltipW = Math.min(288, vw - pad * 2);
-    // ideal center of trigger
+    const isMobile = vw < 640;
+    // slightly narrower tooltip on phones so it doesn't feel pushed off-center
+    const tooltipW = isMobile ? Math.min(260, vw - pad * 2) : Math.min(288, vw - pad * 2);
     const center = rect.left + rect.width / 2;
-    // clamp tooltip so it stays within viewport
     const halfW = tooltipW / 2;
     const clamped = Math.max(pad + halfW, Math.min(vw - pad - halfW, center));
-    // arrow tracks the trigger center relative to the clamped tooltip position
     const arrowPx = center - (clamped - halfW);
     const arrowLeft = `${Math.max(16, Math.min(tooltipW - 16, arrowPx))}px`;
+    // give a little more vertical clearance above the trigger on mobile
+    const top = isMobile ? rect.top - 12 : rect.top - 8;
 
-    setPos({ top: rect.top - 8, left: clamped, width: tooltipW, arrowLeft });
+    setPos({ top, left: clamped, width: tooltipW, arrowLeft });
   };
 
   useEffect(() => {
@@ -72,7 +72,7 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
           zIndex: 2147483647,
           pointerEvents: 'none',
         }}>
-          <div className="bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
+          <div className="relative bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60">
             <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
             <div className="absolute -bottom-1.5 w-3 h-3 bg-[#0c1018] border-r border-b border-cyan-500/25"
               style={{ left: pos.arrowLeft, transform: 'translateX(-50%) rotate(45deg)' }} />
@@ -895,7 +895,7 @@ export default function Home() {
 
           {/* MIND POINTS */}
           <section className="bg-gradient-to-br from-purple-500/10 to-blue-500/5 border border-purple-500/20 rounded-[2.5rem] p-8 shadow-xl">
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start mb-6">
               <Tooltip content={
                 <div>
                   <div className="font-black text-purple-400 mb-1">🧠 Mind Points</div>
@@ -917,9 +917,9 @@ export default function Home() {
                     <p>Consecutive fasting days upregulate fat-oxidation enzymes and mitochondrial density. Your streak multiplier is <strong className="text-yellow-300">{streakMultiplier.toFixed(1)}x</strong> — every Mind Point you earn is worth more.</p>
                   </div>
                 }>
-                  <div className="text-right cursor-help">
-                    <div className="text-[0.7rem] font-black text-orange-400 flex items-center gap-1">
-                      <Flame className="w-4 h-4" fill="currentColor" /> {streak} DAY STREAK
+                  <div className="self-start sm:self-auto text-left sm:text-right cursor-help max-w-full">
+                    <div className="text-[0.7rem] font-black text-orange-400 inline-flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-1 whitespace-nowrap">
+                      <Flame className="w-4 h-4 shrink-0" fill="currentColor" /> {streak} DAY STREAK
                     </div>
                     {streak >= 2 && <div className="text-[0.6rem] text-yellow-400 font-bold">{streakMultiplier.toFixed(1)}x multiplier</div>}
                   </div>

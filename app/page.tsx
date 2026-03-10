@@ -260,8 +260,11 @@ function FastingCalendar({ history, activityLog, mpLog, waterLog, electrolyteLog
           const fast = fastMap[dateStr];
           const activityDots = getDots(dateStr);
           const dayActivities = activityMap[dateStr] || [];
+          const dayMpEntries = mpLog.filter(e => new Date(e.time).toLocaleDateString('en-CA') === dateStr && e.label !== 'Water' && e.label !== 'Electrolytes');
+          const dayHydration = mpLog.filter(e => new Date(e.time).toLocaleDateString('en-CA') === dateStr && (e.label === 'Water' || e.label === 'Electrolytes'));
+          const hasAnything = fast || dayActivities.length || dayMpEntries.length || dayHydration.length;
           return (
-            <Tooltip key={d} content={fast || dayActivities.length ? (
+            <Tooltip key={d} content={hasAnything ? (
               <div>
                 {fast && (
                   <>
@@ -275,18 +278,37 @@ function FastingCalendar({ history, activityLog, mpLog, waterLog, electrolyteLog
                   </>
                 )}
                 {dayActivities.length > 0 && (
-                  <div>
-                    <div className="font-black text-white mb-1 text-[0.7rem] uppercase tracking-wide">Activities</div>
+                  <div className="mb-2">
+                    <div className="font-black text-orange-400 mb-1 text-[0.7rem] uppercase tracking-wide">Accelerants</div>
                     <div className="flex flex-wrap gap-1.5">
                       {dayActivities.map((a, i) => (
-                        <span key={i} className="text-[0.5rem] bg-white/5 px-1.5 py-0.5 rounded-full">{a.emoji} {a.label}</span>
+                        <span key={i} className="text-[0.5rem] bg-white/5 px-1.5 py-0.5 rounded-full">{a.emoji} {a.label} · {a.minutes}m</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {dayHydration.length > 0 && (
+                  <div className="mb-2">
+                    <div className="font-black text-cyan-400 mb-1 text-[0.7rem] uppercase tracking-wide">Hydration</div>
+                    <div className="text-[0.55rem] text-[#98a4bb]">
+                      {dayHydration.filter(e => e.label === 'Water').length > 0 && <span>💧 {dayHydration.filter(e => e.label === 'Water').length} water </span>}
+                      {dayHydration.filter(e => e.label === 'Electrolytes').length > 0 && <span>⚡ {dayHydration.filter(e => e.label === 'Electrolytes').length} electrolytes</span>}
+                    </div>
+                  </div>
+                )}
+                {dayMpEntries.length > 0 && (
+                  <div>
+                    <div className="font-black text-purple-400 mb-1 text-[0.7rem] uppercase tracking-wide">Mind Points</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dayMpEntries.map((e, i) => (
+                        <span key={i} className="text-[0.5rem] bg-white/5 px-1.5 py-0.5 rounded-full">🧠 {e.label} +{e.points}</span>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-[0.65rem] text-[#98a4bb]">No fast or activity logged</div>
+              <div className="text-[0.65rem] text-[#98a4bb]">No activity logged</div>
             )}>
               <div className={`aspect-square flex flex-col items-center justify-center text-[0.65rem] font-bold rounded-lg border transition-all ${
                 fast ? (

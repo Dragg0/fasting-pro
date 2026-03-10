@@ -12,11 +12,13 @@ import { supabase } from "@/lib/supabase";
 // ─── TOOLTIP ────────────────────────────────────────────────────────────────
 function Tooltip({ children, content }: { children: React.ReactNode; content: React.ReactNode }) {
   const [show, setShow] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setPortalRoot(document.getElementById('tooltip-root'));
+  }, []);
 
   const updatePos = () => {
     if (triggerRef.current) {
@@ -49,11 +51,10 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
           exit={{ opacity: 0, y: -6, scale: 0.95 }}
           transition={{ duration: 0.15 }}
           style={{ 
-            position: 'fixed',
-            top: pos.top, 
-            left: pos.left, 
+            position: 'absolute',
+            top: pos.top,
+            left: pos.left,
             transform: 'translateX(-50%) translateY(-100%)',
-            zIndex: 99999
           }}
           className="w-72 bg-[#0c1018] border border-cyan-500/25 rounded-2xl p-4 shadow-2xl shadow-black/60 pointer-events-none">
           <div className="text-xs text-[#c8d4e8] leading-relaxed">{content}</div>
@@ -67,7 +68,7 @@ function Tooltip({ children, content }: { children: React.ReactNode; content: Re
     <div ref={triggerRef} className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
       onClick={() => setShow(s => !s)}>
       {children}
-      {mounted && createPortal(tooltip, document.body)}
+      {portalRoot && createPortal(tooltip, portalRoot)}
     </div>
   );
 }

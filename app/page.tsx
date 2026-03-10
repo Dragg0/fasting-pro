@@ -623,14 +623,36 @@ export default function Home() {
 
   const streakMultiplier = Math.min(3, 1 + streak * 0.1);
 
+  const [undoMp, setUndoMp] = useState<{ points: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+
   const addMp = async (base: number) => {
+    // clear any pending undo
+    if (undoMp) clearTimeout(undoMp.timer);
+
     const points = Math.round(base * streakMultiplier);
     const newMp = mp + points, newTotal = totalMpEver + points;
     setMp(newMp); setTotalMpEver(newTotal);
     const newBadges = checkAndAwardBadges(maxHoursEver, streak, newTotal, activityCount, badgesEarned);
-    if (session) await supabase.from('profiles').update({
-      mind_points: newMp, total_mp_ever: newTotal, badges_earned: JSON.stringify(newBadges),
-    }).eq('id', session.user.id);
+
+    // set undo window — persist to DB only after timeout
+    const timer = setTimeout(async () => {
+      setUndoMp(null);
+      if (session) await supabase.from('profiles').update({
+        mind_points: newMp, total_mp_ever: newTotal, badges_earned: JSON.stringify(newBadges),
+      }).eq('id', session.user.id);
+    }, 4000);
+
+    setUndoMp({ points, timer });
+  };
+
+  const handleUndoMp = () => {
+    if (!undoMp) return;
+    clearTimeout(undoMp.timer);
+    const restoredMp = mp - undoMp.points;
+    const restoredTotal = totalMpEver - undoMp.points;
+    setMp(restoredMp);
+    setTotalMpEver(restoredTotal);
+    setUndoMp(null);
   };
 
   if (!mounted) return null;
@@ -1456,6 +1478,23 @@ export default function Home() {
           </section>
         </div>
       </div>
+
+      {/* UNDO MP TOAST */}
+      <AnimatePresence>
+        {undoMp && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 bg-[#0c1018] border border-purple-500/30 rounded-2xl px-5 py-3 shadow-2xl shadow-black/60"
+          >
+            <span className="text-sm text-[#c8d4e8] font-bold">+{undoMp.points} MP</span>
+            <button onClick={handleUndoMp} className="text-sm font-black text-purple-400 hover:text-purple-300 transition-colors uppercase tracking-wider">
+              Undo
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

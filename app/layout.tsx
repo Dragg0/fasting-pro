@@ -1,9 +1,43 @@
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fallow - Metabolic Renewal & Discipline",
-  description: "Let your body recover its fertility. A high-IQ approach to fasting and willpower.",
+  title: "Fallow | Metabolic Mastery",
+  description: "The Metabolic Mastery Engine. Optimize your fasting, refeed with precision, and gamify your discipline.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
+  openGraph: {
+    title: "Fallow | Metabolic Mastery",
+    description: "The Metabolic Mastery Engine. Optimize your fasting, refeed with precision, and gamify your discipline.",
+    url: "https://fallowfast.vercel.app",
+    siteName: "Fallow",
+    images: [
+      {
+        url: "/icon.png",
+        width: 512,
+        height: 512,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fallow | Metabolic Mastery",
+    description: "The Metabolic Mastery Engine. Optimize your fasting, refeed with precision, and gamify your discipline.",
+    images: ["/icon.png"],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#05070b",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

@@ -902,9 +902,9 @@ export default function Home() {
     setUndoMp(null);
   };
 
-  if (!mounted) return null;
-
   const [devHours, setDevHours] = useState(24);
+
+  if (!mounted) return null;
   const realH = elapsed + bonus;
   const currentH = devMode ? devHours : realH;
   const currentPhase = PHASES.find(p => currentH >= p.start && currentH < p.end) || PHASES[PHASES.length - 1];

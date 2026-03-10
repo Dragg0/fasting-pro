@@ -388,16 +388,27 @@ const DEFAULT_ACTIVITIES: ActivityDef[] = [
 
 const EXERCISE_EMOJIS = ['🏊','🚴','🧘','🏀','🎾','🏓','⚽','🥊','🧗','🏈','⛷️','🤸','🚣','🏇','💃','🛹'];
 
-type Badge = { id: string; emoji: string; name: string; desc: string; threshold: number; type: 'hours'|'streak'|'mp'|'activity'; science: string; };
+type Badge = { id: string; emoji: string; name: string; desc: string; threshold: number; type: 'hours'|'streak'|'mp'|'activity'|'hydration'|'firstfast'; science: string; };
 const BADGES: Badge[] = [
+  // Beginner
+  { id:'firstfast', emoji:'🌅', name:'First Light',        desc:'Complete your first fast', threshold:1,  type:'firstfast', science:'Your first completed fast signals a metabolic shift. Even a single fast improves insulin sensitivity for 24-48h and begins upregulating fat oxidation enzymes.' },
+  { id:'firststep', emoji:'👟', name:'First Steps',        desc:'Log your first accelerant',threshold:1,  type:'activity',  science:'Combining exercise with fasting amplifies AMPK activation 2-3x. Your first session creates the template your body will remember and build on.' },
+  // Fasting milestones
   { id:'ketosis',   emoji:'🔥', name:'Ketosis Club',       desc:'Complete an 18h fast', threshold:18,  type:'hours',    science:'At 18h, blood BHB crosses 0.5 mmol/L — the clinical threshold for nutritional ketosis. Your brain is now running on ketone fuel.' },
   { id:'autophagy', emoji:'🧬', name:'Autophagy Unlocked', desc:'Complete a 24h fast',  threshold:24,  type:'hours',    science:'24h fasting strongly suppresses mTOR and activates AMPK, triggering cellular autophagy — your body\'s cleanup and recycling system.' },
   { id:'marathon',  emoji:'🏆', name:'Marathon Fast',      desc:'Complete a 48h fast',  threshold:48,  type:'hours',    science:'48h fasting triggers stem cell regeneration in the gut lining and immune system. IGF-1 drops 60%, dramatically slowing cell aging pathways.' },
+  // Streaks
   { id:'streak3',   emoji:'⚡', name:'On a Roll',          desc:'3-day fasting streak', threshold:3,   type:'streak',   science:'After 3 consecutive fasting days, mitochondrial biogenesis upregulates. Your cells are literally building more power plants.' },
   { id:'streak7',   emoji:'📅', name:'Iron Will',          desc:'7-day fasting streak', threshold:7,   type:'streak',   science:'7-day fasters show measurable improvements in insulin sensitivity (HOMA-IR), blood pressure, and inflammatory markers (CRP, IL-6).' },
   { id:'streak30',  emoji:'💎', name:'Diamond Mind',       desc:'30-day fasting streak',threshold:30,  type:'streak',   science:'30-day metabolic adaptation: your fat oxidation enzymes (CPT-1, HADHA) are significantly upregulated. You are now fat-adapted at the enzymatic level.' },
+  // Mind Points
   { id:'century',   emoji:'💯', name:'Century',            desc:'Earn 100 Mind Points', threshold:100, type:'mp',       science:'Behavioral science shows it takes ~21-66 days to form a habit. 100 Mind Points means you\'ve reinforced self-control pathways repeatedly — the neural grooves are forming.' },
+  { id:'mp500',     emoji:'🧠', name:'Mind Over Matter',   desc:'Earn 500 Mind Points', threshold:500, type:'mp',       science:'500 Mind Points represents hundreds of deliberate choices. Prefrontal cortex gray matter density measurably increases with sustained self-regulation practice.' },
+  { id:'mp1000',    emoji:'🏛️', name:'Stoic',              desc:'Earn 1000 Mind Points',threshold:1000,type:'mp',       science:'At 1000 MP, your self-control pathways are deeply grooved. Studies show this level of behavioral reinforcement creates automatic habits — discipline becomes effortless.' },
+  // Activity
   { id:'mover',     emoji:'🏅', name:'Mover',              desc:'Log 5 activity sessions',threshold:5, type:'activity', science:'Exercise during fasting boosts AMPK 2-3x more than either alone. Five sessions means you\'ve compounded the fasting effect significantly.' },
+  // Hydration
+  { id:'hydrated',  emoji:'💧', name:'Hydrated',           desc:'Log 8 waters in a day', threshold:8,  type:'hydration', science:'Proper hydration during fasting maintains blood volume, supports kidney filtration, and prevents false hunger signals. 8 glasses is the threshold where cognitive performance stops declining.' },
 ];
 
 const GOAL_OPTIONS = [14, 16, 18, 20, 24, 36, 48];
@@ -579,13 +590,16 @@ export default function Home() {
     }
   };
 
-  const checkAndAwardBadges = (maxH: number, str: number, totalMp: number, actCount: number, current: string[]) => {
+  const checkAndAwardBadges = (maxH: number, str: number, totalMp: number, actCount: number, current: string[], wCount?: number) => {
     const next = [...current];
     let newest: Badge | null = null;
+    const fastCount = fastHistory.length + (maxH > 0 && !next.includes('firstfast') ? 1 : 0);
     for (const b of BADGES) {
       if (next.includes(b.id)) continue;
       const ok = (b.type==='hours' && maxH>=b.threshold) || (b.type==='streak' && str>=b.threshold) ||
-                 (b.type==='mp' && totalMp>=b.threshold) || (b.type==='activity' && actCount>=b.threshold);
+                 (b.type==='mp' && totalMp>=b.threshold) || (b.type==='activity' && actCount>=b.threshold) ||
+                 (b.type==='hydration' && (wCount ?? waterCount) >= b.threshold) ||
+                 (b.type==='firstfast' && fastCount >= b.threshold);
       if (ok) { next.push(b.id); newest = b; }
     }
     if (next.length !== current.length) {
@@ -700,8 +714,10 @@ export default function Home() {
     const entry = { label: 'Water', points: pts, time: new Date().toISOString() };
     const newLog = [entry, ...mpLog].slice(0, 50);
     setMpLog(newLog);
+    const newBadges = checkAndAwardBadges(maxHoursEver, streak, newTotal, activityCount, badgesEarned, n);
     if (session) await supabase.from('profiles').update({
       water_count: n, mind_points: newMp, total_mp_ever: newTotal, mp_log: JSON.stringify(newLog),
+      badges_earned: JSON.stringify(newBadges),
     }).eq('id', session.user.id);
   };
 
@@ -1673,9 +1689,10 @@ export default function Home() {
                       </div>
                     </div>
                   }>
-                    <div className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all cursor-help ${earned ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/5 opacity-30'}`}>
-                      <span className={`text-2xl ${earned?'':'grayscale'}`}>{badge.emoji}</span>
-                      <span className={`text-[0.5rem] font-black text-center leading-tight ${earned?'text-yellow-300':'text-[#4b5563]'}`}>{badge.name}</span>
+                    <div className={`relative flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all cursor-help overflow-hidden ${earned ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/5 opacity-30'}`}>
+                      {earned && <div className="absolute inset-0 badge-shimmer rounded-2xl" />}
+                      <span className={`text-2xl relative z-10 ${earned?'':'grayscale'}`}>{badge.emoji}</span>
+                      <span className={`text-[0.5rem] font-black text-center leading-tight relative z-10 ${earned?'text-yellow-300':'text-[#4b5563]'}`}>{badge.name}</span>
                     </div>
                   </Tooltip>
                 );

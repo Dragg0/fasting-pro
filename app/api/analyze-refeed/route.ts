@@ -87,20 +87,32 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
       return NextResponse.json({ error: data.error.message || "Gemini API error" }, { status: 500 });
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Gemini 3 Flash may return multiple parts (thinking + text)
+    // Find the part that contains actual text (not just thoughtSignature)
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const textPart = parts.find((p: any) => p.text && !p.thoughtSignature)
+      || parts.find((p: any) => p.text);
+    const text = textPart?.text;
+
     if (!text) {
-      return NextResponse.json({ error: "No response from AI", raw: JSON.stringify(data) }, { status: 500 });
+      return NextResponse.json({
+        error: "No text in AI response",
+        raw: JSON.stringify(parts.map((p: any) => Object.keys(p))).slice(0, 500)
+      }, { status: 500 });
     }
 
-    // Parse JSON from response (handle potential markdown wrapping)
+    // Parse JSON from response (handle markdown code fences, extra text, etc.)
     let analysis;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
-    } catch {
+      // Strip markdown code fences if present
+      const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON object found");
+      analysis = JSON.parse(jsonMatch[0]);
+    } catch (parseErr: any) {
       return NextResponse.json({
-        error: "Failed to parse AI response",
-        raw: text
+        error: "Failed to parse AI response: " + parseErr.message,
+        raw: text.slice(0, 500)
       }, { status: 500 });
     }
 

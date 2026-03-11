@@ -860,7 +860,7 @@ export default function Home() {
         throw new Error(`Server ${res.status}: ${text.slice(0, 200)}`);
       }
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) throw new Error(data.error + (data.raw ? '\n\nRaw: ' + data.raw : ''));
       setPlateScanResult(data);
       setScanPhase('done');
     } catch (err: any) {

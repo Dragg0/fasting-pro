@@ -908,6 +908,23 @@ export default function Home() {
   const realH = elapsed + bonus;
   const currentH = devMode ? devHours : realH;
   const currentPhase = PHASES.find(p => currentH >= p.start && currentH < p.end) || PHASES[PHASES.length - 1];
+
+  // ── Metabolic Velocity Engine ──
+  // velocity = effective hours / real hours. >1 means accelerants are compressing time
+  const velocity = elapsed > 0.5 ? (elapsed + bonus) / elapsed : 1;
+  // Predict real-time hours until a target metabolic hour is reached
+  const getETA = (targetH: number): number | null => {
+    if (currentH >= targetH) return null; // already passed
+    if (!startTime && !devMode) return null; // not fasting
+    const remainingMetabolicH = targetH - currentH;
+    return remainingMetabolicH / velocity; // real hours needed at current pace
+  };
+  const formatETA = (hours: number): string => {
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  };
   const goalProgress = Math.min(100, (currentH / goalHours) * 100);
   const fatPct = Math.min(95, Math.round(
     currentH <= 4  ? 0 :
@@ -2107,26 +2124,78 @@ export default function Home() {
               <Clock className="w-4 h-4 text-cyan-500/50" />
             </div>
             <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow">
-              {PHASES.map(p => (
+              {PHASES.map(p => {
+                const isCurrent = currentH >= p.start && currentH < p.end;
+                const isComplete = currentH >= p.end;
+                const eta = getETA(p.start);
+                const phaseProgress = isCurrent ? Math.min(100, ((currentH - p.start) / (p.end - p.start)) * 100) : 0;
+                return (
                 <motion.div key={p.id} whileHover={{ x:5 }} onClick={() => setSelectedPhase(p)}
-                  className={`group p-5 rounded-[1.5rem] border transition-all cursor-pointer relative overflow-hidden ${currentH>=p.start && currentH<p.end ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100'}`}>
-                  {currentH>=p.end && <div className="absolute top-2 right-2"><CheckCircle2 className="w-3 h-3 text-cyan-400" /></div>}
+                  className={`group p-5 rounded-[1.5rem] border transition-all cursor-pointer relative overflow-hidden ${isCurrent ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/[0.02] border-white/5 opacity-40 hover:opacity-100'}`}>
+                  {isComplete && <div className="absolute top-2 right-2"><CheckCircle2 className="w-3 h-3 text-cyan-400" /></div>}
                   <div className="flex justify-between items-start mb-3">
-                    <span className={`text-[0.6rem] font-black tracking-widest px-2 py-1 rounded-md ${currentH>=p.start && currentH<p.end ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-[#4b5563]'}`}>{p.start}-{p.end}H</span>
-                    <Info className="w-3 h-3 text-[#4b5563] group-hover:text-cyan-400 transition-colors" />
+                    <span className={`text-[0.6rem] font-black tracking-widest px-2 py-1 rounded-md ${isCurrent ? 'bg-cyan-500/20 text-cyan-400' : 'bg-white/5 text-[#4b5563]'}`}>{p.start}-{p.end}H</span>
+                    <div className="flex items-center gap-2">
+                      {/* Velocity ETA for upcoming phases */}
+                      {eta !== null && !isComplete && !isCurrent && (startTime || devMode) && (
+                        <span className="text-[0.5rem] font-black tracking-wider text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20">
+                          T-{formatETA(eta)}
+                        </span>
+                      )}
+                      {isCurrent && velocity > 1.05 && (
+                        <span className="text-[0.5rem] font-black tracking-wider text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20">
+                          {velocity.toFixed(1)}x
+                        </span>
+                      )}
+                      <Info className="w-3 h-3 text-[#4b5563] group-hover:text-cyan-400 transition-colors" />
+                    </div>
                   </div>
-                  <h3 className={`text-base font-bold mb-2 tracking-tight ${currentH>=p.start && currentH<p.end ? 'text-white' : 'text-[#98a4bb]'}`}>{p.title}</h3>
+                  <h3 className={`text-base font-bold mb-2 tracking-tight ${isCurrent ? 'text-white' : 'text-[#98a4bb]'}`}>{p.title}</h3>
                   <p className="text-[0.7rem] text-[#6b7280] leading-snug line-clamp-2">{p.notes}</p>
+                  {/* Phase progress bar for current phase */}
+                  {isCurrent && (
+                    <div className="mt-3 h-1 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${phaseProgress}%` }}
+                        className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-full"
+                      />
+                    </div>
+                  )}
                 </motion.div>
-              ))}
+                );
+              })}
             </div>
-            <div className="mt-8 pt-8 border-t border-white/5">
-              <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
-                <span className="text-[0.65rem] font-black text-[#4b5563] uppercase tracking-widest">Next Milestone</span>
-                <span className="text-xs font-black text-orange-400">
-                  {currentH<12 ? 'Fuel Shift @ 12h' : currentH<18 ? 'Ketosis @ 18h' : currentH<24 ? 'Deep Ketosis @ 24h' : currentH<48 ? 'Autophagy @ 48h' : 'Extended Fast'}
-                </span>
-              </div>
+            <div className="mt-8 pt-8 border-t border-white/5 space-y-3">
+              {/* Next milestone with ETA */}
+              {(() => {
+                const milestones = [
+                  { h: 12, label: 'Fuel Shift' },
+                  { h: 18, label: 'Ketosis' },
+                  { h: 24, label: 'Deep Ketosis' },
+                  { h: 48, label: 'Autophagy Peak' },
+                ];
+                const next = milestones.find(m => currentH < m.h);
+                const eta = next ? getETA(next.h) : null;
+                return (
+                  <div className="bg-black/40 border border-white/5 rounded-2xl p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[0.65rem] font-black text-[#4b5563] uppercase tracking-widest">Next Milestone</span>
+                      <span className="text-xs font-black text-orange-400">
+                        {next ? `${next.label} @ ${next.h}h` : 'Extended Fast'}
+                      </span>
+                    </div>
+                    {eta !== null && (startTime || devMode) && (
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-[0.55rem] font-bold text-[#4b5563] uppercase tracking-widest">AI Forecast</span>
+                        <span className="text-[0.65rem] font-black text-cyan-400">
+                          Est. arrival in {formatETA(eta)}{velocity > 1.05 ? ` (${velocity.toFixed(1)}x velocity)` : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </section>
         </div>

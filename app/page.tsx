@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import {
   Brain, History, LogIn, TrendingUp, PlusCircle, CheckCircle2,
   Flame, Zap, Droplets, Info, Clock, LogOut, Loader2, Trophy, Target, Scale, UtensilsCrossed, ChevronDown,
-  Footprints, Moon, ShieldCheck
+  Footprints, Moon, ShieldCheck, Camera, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
@@ -512,6 +512,14 @@ export default function Home() {
 
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+
+  // Plate Scan state
+  const [plateScanImage, setPlateScanImage] = useState<string | null>(null);
+  const [plateScanResult, setPlateScanResult] = useState<any>(null);
+  const [plateScanLoading, setPlateScanLoading] = useState(false);
+  const [showPlateScan, setShowPlateScan] = useState(false);
+  const [scanPhase, setScanPhase] = useState<'idle' | 'scanning' | 'done'>('idle');
+  const plateScanInputRef = useRef<HTMLInputElement>(null);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [pickerValue, setPickerValue] = useState("");
   const [showActivityModal, setShowActivityModal] = useState(false);
@@ -808,6 +816,45 @@ export default function Home() {
   };
 
   const triggerScan = () => { setShowScanner(true); setTimeout(() => setShowScanner(false), 2000); };
+
+  // ── Plate Scan ──
+  const handlePlateScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      setPlateScanImage(base64);
+      setShowPlateScan(true);
+      setScanPhase('scanning');
+      setPlateScanResult(null);
+      setPlateScanLoading(true);
+      try {
+        const res = await fetch('/api/analyze-refeed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: base64,
+            fastDuration: currentH,
+            userGoal: null,
+          }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        setPlateScanResult(data);
+        setScanPhase('done');
+      } catch (err: any) {
+        setPlateScanResult({ error: err.message || 'Analysis failed' });
+        setScanPhase('done');
+      } finally {
+        setPlateScanLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  };
 
   const logRefeed = async (food: RefeedFood) => {
     const isSelected = refeedLogged.some(f => f.label === food.label);
@@ -2049,6 +2096,23 @@ export default function Home() {
                               </ul>
                             </div>
 
+                            {/* AI Plate Scanner */}
+                            <div className="mb-4">
+                              <input ref={plateScanInputRef} type="file" accept="image/*" capture="environment" onChange={handlePlateScan} className="hidden" />
+                              <button
+                                onClick={() => plateScanInputRef.current?.click()}
+                                className="w-full p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all flex items-center justify-center gap-3 group"
+                              >
+                                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                  <Camera className="w-5 h-5 text-cyan-400" />
+                                </div>
+                                <div className="text-left">
+                                  <div className="text-xs font-black text-cyan-400 tracking-tight">SCAN YOUR PLATE</div>
+                                  <div className="text-[0.55rem] text-[#6b7280] font-bold">AI-powered refeed safety analysis</div>
+                                </div>
+                              </button>
+                            </div>
+
                             {/* Food choices */}
                             <div className="mb-4">
                               <div className="text-[0.6rem] font-black uppercase tracking-widest text-[#4b5563] mb-3">
@@ -2232,6 +2296,143 @@ export default function Home() {
           </section>
         </div>
       </div>
+
+      {/* PLATE SCAN MODAL */}
+      <AnimatePresence>
+        {showPlateScan && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4"
+          >
+            {/* Close button */}
+            <button onClick={() => { setShowPlateScan(false); setScanPhase('idle'); setPlateScanImage(null); setPlateScanResult(null); }}
+              className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors z-10">
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            {/* Image preview with laser scan */}
+            <div className="relative w-full max-w-md rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+              {plateScanImage && (
+                <img src={plateScanImage} alt="Plate" className="w-full object-cover max-h-[50vh]" />
+              )}
+              {/* Laser line animation */}
+              {scanPhase === 'scanning' && (
+                <motion.div
+                  initial={{ top: '0%' }}
+                  animate={{ top: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute left-0 w-full h-[3px] bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.9),0_0_60px_rgba(34,211,238,0.4)] z-10"
+                />
+              )}
+              {/* Scanning overlay */}
+              {scanPhase === 'scanning' && (
+                <div className="absolute inset-0 bg-cyan-500/5 flex items-center justify-center">
+                  <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="text-center"
+                  >
+                    <div className="text-xs font-black text-cyan-400 uppercase tracking-[0.3em]">Analyzing Metabolic Impact</div>
+                    <div className="text-[0.55rem] text-cyan-400/60 mt-1">Gemini 3 Flash · {currentH.toFixed(0)}h fasted</div>
+                  </motion.div>
+                </div>
+              )}
+            </div>
+
+            {/* Results */}
+            {scanPhase === 'done' && plateScanResult && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-md mt-6 space-y-3"
+              >
+                {plateScanResult.error ? (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-center">
+                    <div className="text-red-400 font-black text-sm mb-1">Analysis Failed</div>
+                    <div className="text-[0.7rem] text-red-300/70">{plateScanResult.error}</div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Grade card */}
+                    <div className={`rounded-2xl p-5 border text-center ${
+                      plateScanResult.refeed_grade?.startsWith('A') ? 'bg-green-500/10 border-green-500/30' :
+                      plateScanResult.refeed_grade?.startsWith('B') ? 'bg-cyan-500/10 border-cyan-500/30' :
+                      plateScanResult.refeed_grade?.startsWith('C') ? 'bg-yellow-500/10 border-yellow-500/30' :
+                      'bg-red-500/10 border-red-500/30'
+                    }`}>
+                      <div className="text-[0.55rem] font-black uppercase tracking-[0.3em] text-[#6b7280] mb-2">Refeed Safety Grade</div>
+                      <div className={`text-5xl font-black ${
+                        plateScanResult.refeed_grade?.startsWith('A') ? 'text-green-400' :
+                        plateScanResult.refeed_grade?.startsWith('B') ? 'text-cyan-400' :
+                        plateScanResult.refeed_grade?.startsWith('C') ? 'text-yellow-400' :
+                        'text-red-400'
+                      }`}>{plateScanResult.refeed_grade}</div>
+                      <div className="text-[0.6rem] text-[#98a4bb] mt-1 font-bold">After {currentH.toFixed(0)}h fast</div>
+                    </div>
+
+                    {/* Components */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                      <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Detected Foods</div>
+                      <div className="flex flex-wrap gap-2">
+                        {(plateScanResult.estimated_portions || plateScanResult.primary_components || []).map((item: string, i: number) => (
+                          <span key={i} className="text-[0.65rem] font-bold text-white bg-white/10 px-3 py-1 rounded-full">{item}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Macros */}
+                    {plateScanResult.estimated_macros && (
+                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                        <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Estimated Macros</div>
+                        <div className="grid grid-cols-5 gap-2 text-center">
+                          {Object.entries(plateScanResult.estimated_macros).map(([key, val]) => (
+                            <div key={key}>
+                              <div className="text-sm font-black text-white">{val as string}</div>
+                              <div className="text-[0.5rem] font-bold text-[#6b7280] uppercase">{key}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Impact */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                      <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Metabolic Impact</div>
+                      <p className="text-[0.7rem] text-[#c8d4e8] leading-relaxed">{plateScanResult.metabolic_impact}</p>
+                    </div>
+
+                    {/* Warning */}
+                    {plateScanResult.safety_warning && plateScanResult.safety_warning !== 'None' && plateScanResult.safety_warning !== 'None.' && (
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+                        <div className="text-[0.55rem] font-black uppercase tracking-widest text-red-400 mb-2">⚠️ Safety Warning</div>
+                        <p className="text-[0.7rem] text-red-200 leading-relaxed">{plateScanResult.safety_warning}</p>
+                      </div>
+                    )}
+
+                    {/* Recommendation */}
+                    {plateScanResult.recommendation && (
+                      <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-2xl p-4">
+                        <div className="text-[0.55rem] font-black uppercase tracking-widest text-cyan-400 mb-2">Recommendation</div>
+                        <p className="text-[0.7rem] text-cyan-200 leading-relaxed">{plateScanResult.recommendation}</p>
+                      </div>
+                    )}
+
+                    {/* Rescan button */}
+                    <button
+                      onClick={() => { setScanPhase('idle'); setPlateScanImage(null); setPlateScanResult(null); plateScanInputRef.current?.click(); }}
+                      className="w-full p-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all text-xs font-black text-[#98a4bb] uppercase tracking-widest"
+                    >
+                      Scan Another Plate
+                    </button>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* UNDO MP TOAST */}
       <AnimatePresence>

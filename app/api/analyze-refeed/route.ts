@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,15 +8,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const hours = typeof fastDuration === 'number' ? fastDuration.toFixed(1) : '0';
 
     const prompt = `You are the Fallow Metabolic Engine — a precise, clinical refeed safety analyzer.
 
-The user just completed a ${fastDuration.toFixed(1)}-hour fast${userGoal ? ` with a goal of "${userGoal}"` : ''}.
+The user just completed a ${hours}-hour fast${userGoal ? ` with a goal of "${userGoal}"` : ''}.
 They are about to break their fast with the food shown in this photo.
 
 Analyze the plate and respond in EXACTLY this JSON format (no markdown, no code fences):
@@ -53,17 +51,38 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
       ? image.split(";")[0].split(":")[1]
       : "image/jpeg";
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType,
-        },
-      },
-    ]);
+    // Use REST API directly to avoid SDK model name validation issues
+    const model = "gemini-3-flash-preview";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    const text = result.response.text();
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType, data: base64Data } },
+          ],
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1024,
+        },
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error("Gemini API Error:", JSON.stringify(data.error));
+      return NextResponse.json({ error: data.error.message || "Gemini API error" }, { status: 500 });
+    }
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      return NextResponse.json({ error: "No response from AI", raw: JSON.stringify(data) }, { status: 500 });
+    }
 
     // Parse JSON from response (handle potential markdown wrapping)
     let analysis;

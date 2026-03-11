@@ -526,6 +526,12 @@ export default function Home() {
   const [devMode, setDevMode] = useState(false);
   const isDev = session?.user?.email === 'drjmpdds@gmail.com';
   const devLongPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Sandbox helper — skips Supabase writes when dev mode is active
+  const dbUpdate = (data: Record<string, any>) => {
+    if (devMode) return Promise.resolve();
+    if (!session) return Promise.resolve();
+    return supabase.from('profiles').update(data).eq('id', session.user.id);
+  };
   const [showGoalCelebration, setShowGoalCelebration] = useState(false);
   const [showBadgeCelebration, setShowBadgeCelebration] = useState<Badge | null>(null);
   const goalReachedRef = useRef(false);
@@ -610,7 +616,7 @@ export default function Home() {
         const newMax = currentH;
         setMaxHoursEver(newMax);
         checkAndAwardBadges(newMax, streak, totalMpEver, activityCount, badgesEarned);
-        if (session) supabase.from('profiles').update({ max_hours_ever: newMax }).eq('id', session.user.id);
+        dbUpdate({ max_hours_ever: newMax });
       }
     }
     if (currentH < goalHours) goalReachedRef.current = false;
@@ -662,7 +668,7 @@ export default function Home() {
     if (next.length !== current.length) {
       setBadgesEarned(next);
       if (newest) setShowBadgeCelebration(newest);
-      if (session) supabase.from('profiles').update({ badges_earned: JSON.stringify(next) }).eq('id', session!.user.id);
+      dbUpdate({ badges_earned: JSON.stringify(next) });
     }
     return next;
   };
@@ -691,12 +697,13 @@ export default function Home() {
     try {
       const payload = JSON.parse(code.replace("GAZELAM_SYNC_PAYLOAD:", ""));
       if (!session) { alert("Please sign in first."); return; }
-      const { error } = await supabase.from('profiles').update({
+      const result = await dbUpdate({
         mind_points: payload.fastData?.mindPoints || 0,
         fast_start_time: payload.start || null,
         accelerant_minutes: payload.fastData?.accelerantMinutes || 0,
         updated_at: new Date().toISOString(),
-      }).eq('id', session.user.id);
+      });
+      const error = result && 'error' in result ? (result as any).error : null;
       if (error) alert("Sync error: " + error.message);
       else { alert("Import Successful! Reloading..."); fetchUserData(session.user.id); }
     } catch { alert("Invalid Sync Code."); }
@@ -716,10 +723,10 @@ export default function Home() {
     setAccelerantMinutes(0); setActivityLog([]); setWaterCount(0); setElectrolyteCount(0);
     goalReachedRef.current = realH >= goalHours;
     setShowStartPicker(false);
-    if (session) await supabase.from('profiles').update({
+    await dbUpdate({
       fast_start_time: chosen.toISOString(), accelerant_minutes: 0,
       activity_log: '[]', water_count: 0, electrolyte_count: 0,
-    }).eq('id', session.user.id);
+    });
   };
 
   const openActivity = (act: ActivityDef) => {
@@ -736,13 +743,13 @@ export default function Home() {
     setCustomActivities(updated);
     setShowAddActivity(false);
     setNewActName(''); setNewActEmoji('🏊'); setNewActTier('moderate');
-    if (session) await supabase.from('profiles').update({ custom_activities: JSON.stringify(updated) }).eq('id', session.user.id);
+    await dbUpdate({ custom_activities: JSON.stringify(updated) });
   };
 
   const removeCustomActivity = async (label: string) => {
     const updated = customActivities.filter(a => a.label !== label);
     setCustomActivities(updated);
-    if (session) await supabase.from('profiles').update({ custom_activities: JSON.stringify(updated) }).eq('id', session.user.id);
+    await dbUpdate({ custom_activities: JSON.stringify(updated) });
   };
 
   const confirmActivity = async () => {
@@ -757,10 +764,10 @@ export default function Home() {
     setBonus(newBonus); setAccelerantMinutes(newAccelTotal); setActivityLog(newLog); setActivityCount(newActCount);
     setShowActivityModal(false); triggerScan();
     const newBadges = checkAndAwardBadges(maxHoursEver, streak, totalMpEver, newActCount, badgesEarned);
-    if (session) await supabase.from('profiles').update({
+    await dbUpdate({
       accelerant_minutes: newAccelTotal, activity_log: JSON.stringify(newLog),
       activity_count: newActCount, badges_earned: JSON.stringify(newBadges),
-    }).eq('id', session.user.id);
+    });
   };
 
   const logWater = async () => {
@@ -772,10 +779,10 @@ export default function Home() {
     const newLog = [entry, ...mpLog].slice(0, 50);
     setMpLog(newLog);
     const newBadges = checkAndAwardBadges(maxHoursEver, streak, newTotal, activityCount, badgesEarned, n);
-    if (session) await supabase.from('profiles').update({
+    await dbUpdate({
       water_count: n, mind_points: newMp, total_mp_ever: newTotal, mp_log: JSON.stringify(newLog),
       badges_earned: JSON.stringify(newBadges),
-    }).eq('id', session.user.id);
+    });
   };
 
   const logElectrolyte = async () => {
@@ -786,9 +793,9 @@ export default function Home() {
     const entry = { label: 'Electrolytes', points: pts, time: new Date().toISOString() };
     const newLog = [entry, ...mpLog].slice(0, 50);
     setMpLog(newLog);
-    if (session) await supabase.from('profiles').update({
+    await dbUpdate({
       electrolyte_count: n, mind_points: newMp, total_mp_ever: newTotal, mp_log: JSON.stringify(newLog),
-    }).eq('id', session.user.id);
+    });
   };
 
   const logWeight = async () => {
@@ -797,7 +804,7 @@ export default function Home() {
     const entry = { weight: w, ts: new Date().toISOString() };
     const newLog = [...weightLog, entry].slice(-30); // keep last 30
     setWeightLog(newLog); setWeightInput(""); setShowWeightInput(false);
-    if (session) await supabase.from('profiles').update({ weight_log: JSON.stringify(newLog) }).eq('id', session.user.id);
+    await dbUpdate({ weight_log: JSON.stringify(newLog) });
   };
 
   const triggerScan = () => { setShowScanner(true); setTimeout(() => setShowScanner(false), 2000); };
@@ -817,13 +824,13 @@ export default function Home() {
         const entry = { label: `Refeed: ${food.label}`, points, time: new Date().toISOString() };
         const newLog = [entry, ...mpLog].slice(0, 50);
         setMpLog(newLog);
-        if (session) await supabase.from('profiles').update({
+        await dbUpdate({
           last_refeed: food.label, mind_points: newMp, total_mp_ever: newTotal, mp_log: JSON.stringify(newLog),
-        }).eq('id', session.user.id);
+        });
         return;
       }
     }
-    if (session) await supabase.from('profiles').update({ last_refeed: food.label }).eq('id', session.user.id);
+    await dbUpdate({ last_refeed: food.label });
   };
 
   const endFast = async () => {
@@ -851,13 +858,13 @@ export default function Home() {
     setActivityLog([]); setWaterCount(0); setElectrolyteCount(0); setRefeedLogged([]);
     goalReachedRef.current = false;
 
-    if (session) await supabase.from('profiles').update({
+    await dbUpdate({
       streak: newStreak, max_hours_ever: newMax, fast_start_time: null,
       accelerant_minutes: 0, activity_log: '[]', water_count: 0, electrolyte_count: 0,
       badges_earned: JSON.stringify(newBadges),
       fast_history: JSON.stringify(newHistory),
       last_refeed: refeedLogged.map(f => f.label).join(', '),
-    }).eq('id', session.user.id);
+    });
   };
 
   const streakMultiplier = Math.min(3, 1 + streak * 0.1);
@@ -882,10 +889,10 @@ export default function Home() {
     // set undo window — persist to DB only after timeout
     const timer = setTimeout(async () => {
       setUndoMp(null);
-      if (session) await supabase.from('profiles').update({
+      await dbUpdate({
         mind_points: newMp, total_mp_ever: newTotal, badges_earned: JSON.stringify(newBadges),
         mp_log: JSON.stringify(newLog),
-      }).eq('id', session.user.id);
+      });
     }, 4000);
 
     setUndoMp({ points, timer });
@@ -1254,7 +1261,7 @@ export default function Home() {
                   <div className="grid grid-cols-4 gap-1">
                     {GOAL_OPTIONS.map(h => (
                       <button key={h} onClick={() => { setGoalHours(h); setShowGoalPicker(false); goalReachedRef.current = currentH>=h;
-                        if (session) supabase.from('profiles').update({ fast_goal_hours: h }).eq('id', session.user.id); }}
+                        dbUpdate({ fast_goal_hours: h }); }}
                         className={`py-2 rounded-xl text-xs font-black border transition-all ${goalHours===h ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-white/5 border-white/5 text-[#98a4bb]'}`}>
                         {h}h
                       </button>

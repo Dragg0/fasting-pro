@@ -75,7 +75,8 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
         }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
+          responseMimeType: "application/json",
         },
       }),
     });

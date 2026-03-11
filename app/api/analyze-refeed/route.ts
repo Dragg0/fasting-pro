@@ -132,17 +132,36 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
           // Strategy 4: Find refeed_grade field and reconstruct
           const gradeMatch = allText.match(/"refeed_grade"\s*:\s*"([^"]+)"/);
           if (gradeMatch) {
-            // Partial extraction fallback
-            const extract = (key: string) => {
+            // Partial extraction fallback for strings
+            const extractStr = (key: string) => {
               const m = allText.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)"`));
               return m ? m[1] : '';
             };
+            
+            // Fallback for arrays
+            const extractArr = (key: string) => {
+              const m = allText.match(new RegExp(`"${key}"\\s*:\\s*\\[([^\\]]*)\\]`));
+              return m ? m[1].split(',').map((s: string) => s.replace(/"/g, '').trim()).filter(Boolean) : [];
+            };
+
+            // Fallback for nested macros object
+            const extractMacros = () => {
+              const macros: any = {};
+              ['protein', 'fat', 'carbs', 'fiber', 'calories'].forEach(key => {
+                const m = allText.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)"`));
+                if (m) macros[key] = m[1];
+              });
+              return Object.keys(macros).length > 0 ? macros : null;
+            };
+
             analysis = {
               refeed_grade: gradeMatch[1],
-              primary_components: (allText.match(new RegExp('"primary_components"\\s*:\\s*\\[([^\\]]*)\\]'))?.[1] || '').split(',').map((s: string) => s.replace(/"/g, '').trim()).filter(Boolean),
-              metabolic_impact: extract('metabolic_impact'),
-              safety_warning: extract('safety_warning'),
-              recommendation: extract('recommendation'),
+              primary_components: extractArr('primary_components'),
+              estimated_portions: extractArr('estimated_portions'),
+              metabolic_impact: extractStr('metabolic_impact'),
+              safety_warning: extractStr('safety_warning'),
+              recommendation: extractStr('recommendation'),
+              estimated_macros: extractMacros()
             };
           } else {
             return NextResponse.json({

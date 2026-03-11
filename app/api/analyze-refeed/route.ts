@@ -87,33 +87,66 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
       return NextResponse.json({ error: data.error.message || "Gemini API error" }, { status: 500 });
     }
 
-    // Gemini 3 Flash may return multiple parts (thinking + text)
-    // Find the part that contains actual text (not just thoughtSignature)
+    // Gemini 3 Flash returns multiple parts — collect ALL text from all parts
     const parts = data.candidates?.[0]?.content?.parts || [];
-    const textPart = parts.find((p: any) => p.text && !p.thoughtSignature)
-      || parts.find((p: any) => p.text);
-    const text = textPart?.text;
+    const allText = parts
+      .filter((p: any) => p.text)
+      .map((p: any) => p.text)
+      .join('\n');
 
-    if (!text) {
+    if (!allText) {
       return NextResponse.json({
         error: "No text in AI response",
-        raw: JSON.stringify(parts.map((p: any) => Object.keys(p))).slice(0, 500)
+        raw: JSON.stringify(data).slice(0, 500)
       }, { status: 500 });
     }
 
-    // Parse JSON from response (handle markdown code fences, extra text, etc.)
+    // Try multiple parsing strategies
     let analysis;
     try {
-      // Strip markdown code fences if present
-      const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON object found");
-      analysis = JSON.parse(jsonMatch[0]);
-    } catch (parseErr: any) {
-      return NextResponse.json({
-        error: "Failed to parse AI response: " + parseErr.message,
-        raw: text.slice(0, 500)
-      }, { status: 500 });
+      // Strategy 1: Direct parse
+      analysis = JSON.parse(allText.trim());
+    } catch {
+      try {
+        // Strategy 2: Strip markdown fences
+        const cleaned = allText.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        analysis = JSON.parse(cleaned);
+      } catch {
+        try {
+          // Strategy 3: Find JSON object with balanced braces
+          let depth = 0, start = -1;
+          for (let i = 0; i < allText.length; i++) {
+            if (allText[i] === '{') { if (depth === 0) start = i; depth++; }
+            if (allText[i] === '}') { depth--; if (depth === 0 && start >= 0) {
+              analysis = JSON.parse(allText.slice(start, i + 1));
+              break;
+            }}
+          }
+          if (!analysis) throw new Error("No balanced JSON found");
+        } catch (e: any) {
+          // Strategy 4: Find refeed_grade field and reconstruct
+          const gradeMatch = allText.match(/"refeed_grade"\s*:\s*"([^"]+)"/);
+          if (gradeMatch) {
+            // Partial extraction fallback
+            const extract = (key: string) => {
+              const m = allText.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)"`));
+              return m ? m[1] : '';
+            };
+            analysis = {
+              refeed_grade: gradeMatch[1],
+              primary_components: (allText.match(new RegExp('"primary_components"\\s*:\\s*\\[([^\\]]*)\\]'))?.[1] || '').split(',').map((s: string) => s.replace(/"/g, '').trim()).filter(Boolean),
+              metabolic_impact: extract('metabolic_impact'),
+              safety_warning: extract('safety_warning'),
+              recommendation: extract('recommendation'),
+            };
+          } else {
+            return NextResponse.json({
+              error: "Could not parse AI response",
+              raw: allText.slice(0, 800)
+            }, { status: 500 });
+          }
+        }
+      }
     }
 
     return NextResponse.json(analysis);

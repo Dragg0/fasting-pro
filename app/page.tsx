@@ -910,6 +910,7 @@ export default function Home() {
   };
 
   const [devHours, setDevHours] = useState(24);
+  const [devVelocity, setDevVelocity] = useState(1.5);
 
   if (!mounted) return null;
   const realH = elapsed + bonus;
@@ -917,8 +918,8 @@ export default function Home() {
   const currentPhase = PHASES.find(p => currentH >= p.start && currentH < p.end) || PHASES[PHASES.length - 1];
 
   // ── Metabolic Velocity Engine ──
-  // velocity = effective hours / real hours. >1 means accelerants are compressing time
-  const velocity = elapsed > 0.5 ? (elapsed + bonus) / elapsed : 1;
+  const realVelocity = elapsed > 0.5 ? (elapsed + bonus) / elapsed : 1;
+  const velocity = devMode ? devVelocity : realVelocity;
   // Predict real-time hours until a target metabolic hour is reached
   const getETA = (targetH: number): number | null => {
     if (currentH >= targetH) return null; // already passed
@@ -1632,10 +1633,17 @@ export default function Home() {
               </div>
             </div>
             {devMode && (
-              <div className="w-full z-10 mb-4 flex items-center gap-3 bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-2">
-                <span className="text-[0.5rem] font-black uppercase tracking-widest text-purple-400 whitespace-nowrap">DEV {devHours}h</span>
-                <input type="range" min={0} max={72} step={0.5} value={devHours} onChange={e => setDevHours(Number(e.target.value))}
-                  className="flex-1 h-1 accent-purple-500 cursor-pointer" />
+              <div className="w-full z-10 mb-4 space-y-2 bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-[0.5rem] font-black uppercase tracking-widest text-purple-400 whitespace-nowrap">HOURS {devHours}h</span>
+                  <input type="range" min={0} max={72} step={0.5} value={devHours} onChange={e => setDevHours(Number(e.target.value))}
+                    className="flex-1 h-1 accent-purple-500 cursor-pointer" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[0.5rem] font-black uppercase tracking-widest text-cyan-400 whitespace-nowrap">VELOCITY {devVelocity.toFixed(1)}x</span>
+                  <input type="range" min={1} max={3} step={0.1} value={devVelocity} onChange={e => setDevVelocity(Number(e.target.value))}
+                    className="flex-1 h-1 accent-cyan-500 cursor-pointer" />
+                </div>
               </div>
             )}
             <div className="relative w-full max-w-[400px] flex justify-center py-6 z-10">

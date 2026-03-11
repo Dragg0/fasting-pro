@@ -1136,7 +1136,10 @@ export default function Home() {
       {/* ── HEADER ── */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 border-b border-white/5 pb-8">
         <div className="flex-1 min-w-0">
-          <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-white uppercase italic">FALLOW</h1>
+          <div className="flex items-center gap-4">
+            <img src="/icon.png" alt="Fallow" className="w-14 h-14 md:w-16 md:h-16 rounded-2xl" />
+            <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-white uppercase italic">FALLOW</h1>
+          </div>
           <p className="text-[#98a4bb] font-medium mt-3 flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
             <span className="w-2 h-2 shrink-0 rounded-full bg-cyan-500 animate-pulse" />
             {session ? <span className="truncate">Active: <span className="text-cyan-400 font-bold">{session.user.email}</span></span>

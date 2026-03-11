@@ -819,40 +819,52 @@ export default function Home() {
   const triggerScan = () => { setShowScanner(true); setTimeout(() => setShowScanner(false), 2000); };
 
   // ── Plate Scan ──
+  // Compress image to max 1MB JPEG for API
+  const compressImage = (file: File, maxWidth = 1024): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handlePlateScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
+    try {
+      const base64 = await compressImage(file);
       setPlateScanImage(base64);
       setShowPlateScan(true);
       setScanPhase('scanning');
       setPlateScanResult(null);
       setPlateScanLoading(true);
-      try {
-        const res = await fetch('/api/analyze-refeed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            image: base64,
-            fastDuration: currentH,
-            userGoal: null,
-          }),
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        setPlateScanResult(data);
-        setScanPhase('done');
-      } catch (err: any) {
-        setPlateScanResult({ error: err.message || 'Analysis failed' });
-        setScanPhase('done');
-      } finally {
-        setPlateScanLoading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+      const res = await fetch('/api/analyze-refeed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64,
+          fastDuration: currentH || 0,
+          userGoal: null,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setPlateScanResult(data);
+      setScanPhase('done');
+    } catch (err: any) {
+      setPlateScanResult({ error: err.message || 'Analysis failed' });
+      setScanPhase('done');
+    } finally {
+      setPlateScanLoading(false);
+    }
     // Reset input so same file can be re-selected
     e.target.value = '';
   };

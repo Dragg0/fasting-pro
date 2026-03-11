@@ -2135,7 +2135,24 @@ export default function Home() {
         <div className="lg:col-span-4 flex flex-col h-full">
           <section className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 flex flex-col h-full shadow-2xl">
             <div className="flex justify-between items-center mb-8">
-              <h2 className="text-[0.65rem] uppercase tracking-[0.2em] text-[#98a4bb] font-black">72h Metabolic Roadmap</h2>
+              <Tooltip content={
+                <div className="space-y-2">
+                  <div className="font-black text-cyan-400 mb-2">Metabolic Velocity</div>
+                  <p>Your <span className="text-cyan-400 font-bold">velocity</span> measures how fast you're moving through metabolic phases compared to clock time.</p>
+                  <p>Every activity you log adds bonus hours based on its intensity multiplier:</p>
+                  <div className="space-y-1 my-2">
+                    <div className="flex justify-between text-[0.7rem]"><span>🚶 Walk</span><span className="text-cyan-400 font-bold">2x</span></div>
+                    <div className="flex justify-between text-[0.7rem]"><span>🏋️ Lift</span><span className="text-cyan-400 font-bold">2.5x</span></div>
+                    <div className="flex justify-between text-[0.7rem]"><span>🏃 Run</span><span className="text-cyan-400 font-bold">3x</span></div>
+                  </div>
+                  <p>A 30min run at 3x = <span className="text-orange-400 font-bold">+1.5h bonus</span>, compressing your time to the next milestone.</p>
+                  <p className="text-[#6b7280]">The <span className="text-orange-400">T-minus</span> countdowns on each phase reflect your current velocity. More activity = faster ETAs.</p>
+                </div>
+              }>
+                <h2 className="text-[0.65rem] uppercase tracking-[0.2em] text-[#98a4bb] font-black flex items-center gap-2 cursor-help">
+                  72h Metabolic Roadmap <Info className="w-3 h-3 text-[#4b5563]" />
+                </h2>
+              </Tooltip>
               <Clock className="w-4 h-4 text-cyan-500/50" />
             </div>
             <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-grow">

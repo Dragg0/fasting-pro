@@ -1762,11 +1762,11 @@ export default function Home() {
                 );
               })()}
 
-              {/* ── HEART ── deep ketosis fuel (24h+), grows with fast duration */}
+              {/* ── HEART ── ketone-fueled (24h+), plateaus ~32h — steady not dominant */}
               {(startTime || devMode) && currentH > 20 && (() => {
-                const heartIntensity = Math.min(1, (currentH - 20) / 28); // slower ramp — maxes at 48h
-                const glowSize = 9 + heartIntensity * 6; // 9px → 15px
-                const ringSize = 12 + heartIntensity * 8; // 12px → 20px
+                const heartIntensity = Math.min(0.6, (currentH - 20) / 20); // caps at 0.6 by ~32h
+                const glowSize = 9 + heartIntensity * 3; // 9px → 10.8px — modest growth
+                const ringSize = 12 + heartIntensity * 4; // 12px → 14.4px
                 return (
                   <>
                     {/* Core heartbeat glow — grows over time */}

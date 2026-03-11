@@ -507,6 +507,7 @@ export default function Home() {
   const [refeedLogged, setRefeedLogged] = useState<RefeedFood[]>([]);
   const [showRefeedSection, setShowRefeedSection] = useState(true);
   const [showEndFastModal, setShowEndFastModal] = useState(false);
+  const [endPickerValue, setEndPickerValue] = useState("");
   const [fastHistory, setFastHistory] = useState<{start:string;end:string;hours:number;refeed:{emoji:string;label:string;quality:string}[];streak:number}[]>([]);
   const [historyView, setHistoryView] = useState<'list' | 'calendar'>('calendar');
 
@@ -880,9 +881,12 @@ export default function Home() {
     await dbUpdate({ last_refeed: food.label });
   };
 
-  const endFast = async () => {
+  const endFast = async (customEndTime?: Date) => {
+    const endTime = customEndTime || new Date();
+    // Recalculate hours if custom end time provided
+    const actualElapsed = startTime ? (endTime.getTime() - startTime.getTime()) / 3600000 : elapsed;
+    const completedH = actualElapsed + bonus;
     const newStreak = streak + 1;
-    const completedH = currentH;
     const newMax = Math.max(maxHoursEver, completedH);
     setStreak(newStreak);
     setMaxHoursEver(newMax);
@@ -891,7 +895,7 @@ export default function Home() {
     // Build fast history record
     const record = {
       start: startTime?.toISOString() || new Date().toISOString(),
-      end: new Date().toISOString(),
+      end: endTime.toISOString(),
       hours: parseFloat(completedH.toFixed(1)),
       refeed: refeedLogged.map(f => ({ emoji: f.emoji, label: f.label, quality: f.quality })),
       streak: newStreak,
@@ -1010,12 +1014,29 @@ export default function Home() {
               <div className="text-5xl mb-4">🏁</div>
               <h2 className="text-2xl font-black text-white mb-2 tracking-tighter">End Your Fast?</h2>
               <p className="text-[#98a4bb] text-sm mb-2">You've gone <span className="text-white font-black">{currentH.toFixed(1)}h</span> — that's a {streak+1}-day streak.</p>
-              {refeedLogged.length === 0 && <p className="text-yellow-400 text-xs mb-6 font-bold">💡 Tip: Log your refeed below before ending for best tracking.</p>}
-              {refeedLogged.length > 0 && <p className="text-green-400 text-xs mb-6 font-bold">✓ Logged: {refeedLogged.map(f => `${f.emoji} ${f.label}`).join(', ')}</p>}
+              {refeedLogged.length === 0 && <p className="text-yellow-400 text-xs mb-4 font-bold">💡 Tip: Log your refeed below before ending for best tracking.</p>}
+              {refeedLogged.length > 0 && <p className="text-green-400 text-xs mb-4 font-bold">✓ Logged: {refeedLogged.map(f => `${f.emoji} ${f.label}`).join(', ')}</p>}
+              {/* Custom end time picker */}
+              <div className="mb-5 bg-white/5 border border-white/10 rounded-2xl p-3">
+                <label className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] block mb-2">End time (leave blank for now)</label>
+                <input
+                  type="datetime-local"
+                  value={endPickerValue}
+                  onChange={e => setEndPickerValue(e.target.value)}
+                  max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                  min={startTime ? new Date(startTime.getTime() - startTime.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : undefined}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-bold"
+                />
+                {endPickerValue && startTime && (() => {
+                  const endT = new Date(endPickerValue);
+                  const adjH = (endT.getTime() - startTime.getTime()) / 3600000 + bonus;
+                  return <div className="text-[0.6rem] text-cyan-400 font-bold mt-1">Fast will be logged as {adjH.toFixed(1)}h</div>;
+                })()}
+              </div>
               <div className="flex gap-3">
-                <button onClick={() => setShowEndFastModal(false)}
+                <button onClick={() => { setShowEndFastModal(false); setEndPickerValue(''); }}
                   className="flex-1 bg-white/5 border border-white/10 text-[#98a4bb] font-bold py-4 rounded-2xl">KEEP GOING</button>
-                <button onClick={endFast}
+                <button onClick={() => { const endT = endPickerValue ? new Date(endPickerValue) : undefined; endFast(endT); setEndPickerValue(''); }}
                   className="flex-1 bg-gradient-to-br from-orange-400 to-red-500 text-white font-black py-4 rounded-2xl">END FAST</button>
               </div>
             </motion.div>

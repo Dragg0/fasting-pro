@@ -63,9 +63,12 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
     const model = "gemini-3-flash-preview";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         contents: [{
           parts: [
@@ -75,11 +78,12 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
         }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 1024,
           responseMimeType: "application/json",
         },
       }),
     });
+    clearTimeout(timeout);
 
     const data = await response.json();
 

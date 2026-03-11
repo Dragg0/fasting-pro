@@ -2119,7 +2119,7 @@ export default function Home() {
 
                             {/* AI Plate Scanner */}
                             <div className="mb-4">
-                              <input ref={plateScanInputRef} type="file" accept="image/*" capture="environment" onChange={handlePlateScan} className="hidden" />
+                              <input ref={plateScanInputRef} type="file" accept="image/*" onChange={handlePlateScan} className="hidden" />
                               <button
                                 onClick={() => plateScanInputRef.current?.click()}
                                 className="w-full p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all flex items-center justify-center gap-3 group"

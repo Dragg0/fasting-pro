@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 30; // Allow up to 30s for AI response
+
 export async function POST(req: NextRequest) {
   try {
-    const { image, fastDuration, userGoal } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseErr: any) {
+      return NextResponse.json({ error: "Request too large or malformed: " + (parseErr.message || '') }, { status: 400 });
+    }
+    const { image, fastDuration, userGoal } = body;
 
     if (!image) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });

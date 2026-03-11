@@ -855,6 +855,10 @@ export default function Home() {
           userGoal: null,
         }),
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Server ${res.status}: ${text.slice(0, 200)}`);
+      }
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setPlateScanResult(data);

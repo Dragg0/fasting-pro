@@ -525,7 +525,7 @@ export default function Home() {
   const [pickerValue, setPickerValue] = useState("");
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityDef | null>(null);
-  const [activityMinutes, setActivityMinutes] = useState(30);
+  const [activityMinutes, setActivityMinutes] = useState<number|string>(30);
   const [customActivities, setCustomActivities] = useState<ActivityDef[]>([]);
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [newActName, setNewActName] = useState('');
@@ -763,12 +763,13 @@ export default function Home() {
 
   const confirmActivity = async () => {
     if (!selectedActivity) return;
-    const accelMin = activityMinutes * selectedActivity.multiplier;
+    const mins = Number(activityMinutes) || 1;
+    const accelMin = mins * selectedActivity.multiplier;
     const accelH = accelMin / 60;
     const newBonus = bonus + accelH;
     const newAccelTotal = accelerantMinutes + Math.round(accelMin);
     const newActCount = activityCount + 1;
-    const entry = { emoji: selectedActivity.emoji, label: selectedActivity.label, minutes: activityMinutes, bonusH: accelH, ts: new Date().toISOString() };
+    const entry = { emoji: selectedActivity.emoji, label: selectedActivity.label, minutes: mins, bonusH: accelH, ts: new Date().toISOString() };
     const newLog = [entry, ...activityLog];
     setBonus(newBonus); setAccelerantMinutes(newAccelTotal); setActivityLog(newLog); setActivityCount(newActCount);
     setShowActivityModal(false); triggerScan();
@@ -1119,13 +1120,14 @@ export default function Home() {
               </div>
               <label className="text-[0.65rem] font-black uppercase tracking-widest text-[#98a4bb] mb-2 block">Duration (minutes)</label>
               <input type="number" min={1} max={300} value={activityMinutes}
-                onChange={e => setActivityMinutes(Math.max(1, parseInt(e.target.value)||1))}
+                onChange={e => { const v = e.target.value; setActivityMinutes(v === '' ? '' : Math.min(300, Math.max(1, parseInt(v)||1))); }}
+                onBlur={() => { if (activityMinutes === '' || Number(activityMinutes) < 1) setActivityMinutes(1); }}
                 className="w-full bg-black/40 border border-white/10 text-white text-2xl font-black rounded-2xl px-4 py-3 focus:outline-none focus:border-cyan-500/50 text-center mb-2" />
               <div className="text-center text-cyan-400 font-bold text-sm mb-4">
-                = +{(activityMinutes * selectedActivity.multiplier / 60).toFixed(2)}h fasting bonus
+                = +{((Number(activityMinutes) || 0) * selectedActivity.multiplier / 60).toFixed(2)}h fasting bonus
               </div>
               <div className="flex gap-2 mb-6">
-                {[15,30,45,60].map(m => (
+                {[15,30,45,60,90].map(m => (
                   <button key={m} onClick={() => setActivityMinutes(m)}
                     className={`flex-1 py-2 rounded-xl text-xs font-black transition-all border ${activityMinutes===m ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-white/5 border-white/5 text-[#98a4bb]'}`}>{m}m</button>
                 ))}

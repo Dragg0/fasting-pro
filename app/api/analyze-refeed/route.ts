@@ -79,7 +79,6 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
         generationConfig: {
           temperature: 0.3,
           maxOutputTokens: 1024,
-          responseMimeType: "application/json",
         },
       }),
     });
@@ -106,69 +105,46 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
       }, { status: 500 });
     }
 
-    // Try multiple parsing strategies
+    // Strip markdown fences if present
+    let cleaned = allText.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+
+    // Try direct parse first
     let analysis;
     try {
-      // Strategy 1: Direct parse
-      analysis = JSON.parse(allText.trim());
+      analysis = JSON.parse(cleaned);
     } catch {
+      // Fix common issues: literal newlines inside JSON string values
       try {
-        // Strategy 2: Strip markdown fences
-        const cleaned = allText.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-        analysis = JSON.parse(cleaned);
+        const fixed = cleaned
+          .replace(/\n/g, '\\n')   // escape literal newlines
+          .replace(/\r/g, '\\r')   // escape returns
+          .replace(/\t/g, '\\t');  // escape tabs
+        // But don't double-escape already escaped ones
+        const dedoubled = fixed.replace(/\\\\n/g, '\\n').replace(/\\\\r/g, '\\r').replace(/\\\\t/g, '\\t');
+        analysis = JSON.parse(dedoubled);
       } catch {
+        // Find balanced JSON object
         try {
-          // Strategy 3: Find JSON object with balanced braces
-          let depth = 0, start = -1;
-          for (let i = 0; i < allText.length; i++) {
-            if (allText[i] === '{') { if (depth === 0) start = i; depth++; }
-            if (allText[i] === '}') { depth--; if (depth === 0 && start >= 0) {
-              analysis = JSON.parse(allText.slice(start, i + 1));
+          let depth = 0, start = -1, inStr = false, escaped = false;
+          for (let i = 0; i < cleaned.length; i++) {
+            const c = cleaned[i];
+            if (escaped) { escaped = false; continue; }
+            if (c === '\\') { escaped = true; continue; }
+            if (c === '"') { inStr = !inStr; continue; }
+            if (inStr) continue;
+            if (c === '{') { if (depth === 0) start = i; depth++; }
+            if (c === '}') { depth--; if (depth === 0 && start >= 0) {
+              const jsonStr = cleaned.slice(start, i + 1);
+              analysis = JSON.parse(jsonStr);
               break;
             }}
           }
-          if (!analysis) throw new Error("No balanced JSON found");
-        } catch (e: any) {
-          // Strategy 4: Find refeed_grade field and reconstruct
-          const gradeMatch = allText.match(/"refeed_grade"\s*:\s*"([^"]+)"/);
-          if (gradeMatch) {
-            // Partial extraction fallback for strings
-            const extractStr = (key: string) => {
-              const m = allText.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)"`));
-              return m ? m[1] : '';
-            };
-            
-            // Fallback for arrays
-            const extractArr = (key: string) => {
-              const m = allText.match(new RegExp(`"${key}"\\s*:\\s*\\[([^\\]]*)\\]`));
-              return m ? m[1].split(',').map((s: string) => s.replace(/"/g, '').trim()).filter(Boolean) : [];
-            };
-
-            // Fallback for nested macros object
-            const extractMacros = () => {
-              const macros: any = {};
-              ['protein', 'fat', 'carbs', 'fiber', 'calories'].forEach(key => {
-                const m = allText.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)"`));
-                if (m) macros[key] = m[1];
-              });
-              return Object.keys(macros).length > 0 ? macros : null;
-            };
-
-            analysis = {
-              refeed_grade: gradeMatch[1],
-              primary_components: extractArr('primary_components'),
-              estimated_portions: extractArr('estimated_portions'),
-              metabolic_impact: extractStr('metabolic_impact'),
-              safety_warning: extractStr('safety_warning'),
-              recommendation: extractStr('recommendation'),
-              estimated_macros: extractMacros()
-            };
-          } else {
-            return NextResponse.json({
-              error: "Could not parse AI response",
-              raw: allText.slice(0, 800)
-            }, { status: 500 });
-          }
+          if (!analysis) throw new Error("No balanced JSON");
+        } catch {
+          return NextResponse.json({
+            error: "Could not parse AI response",
+            raw: cleaned.slice(0, 1000)
+          }, { status: 500 });
         }
       }
     }

@@ -28,14 +28,15 @@ export async function POST(req: NextRequest) {
 The user just completed a ${hours}-hour fast${userGoal ? ` with a goal of "${userGoal}"` : ''}.
 They are about to break their fast with the food shown in this photo.
 
-Analyze the plate and respond in EXACTLY this JSON format (no markdown, no code fences):
+First, analyze the image naturally and identify the foods as specifically as possible.
+Then produce a COMPLETE JSON object with these exact fields:
 {
   "refeed_grade": "<letter grade A+ through F>",
-  "primary_components": ["<food item 1>", "<food item 2>", ...],
-  "estimated_portions": ["<item 1> (~Xg)", "<item 2> (~Xg)", ...],
-  "metabolic_impact": "<2-3 sentences on how this meal interacts with the user's metabolic state post-fast>",
+  "primary_components": ["<specific food 1>", "<specific food 2>", ...],
+  "estimated_portions": ["<specific item 1> (~portion)", "<specific item 2> (~portion)", ...],
+  "metabolic_impact": "<2-3 sentences on insulin response, digestion, and metabolic impact after this fast>",
   "safety_warning": "<specific warning if high-risk for this fast duration, or 'None' if safe>",
-  "recommendation": "<1 sentence: what to add, remove, or eat first>",
+  "recommendation": "<1 sentence with the best immediate recommendation>",
   "estimated_macros": {
     "protein": "<Xg>",
     "fat": "<Xg>",
@@ -45,13 +46,21 @@ Analyze the plate and respond in EXACTLY this JSON format (no markdown, no code 
   }
 }
 
+Important rules:
+- Never return only the grade. Fill every field.
+- If uncertain, make your best estimate.
+- primary_components must never be empty.
+- estimated_portions must never be empty.
+- metabolic_impact must always be 2-3 useful sentences.
+- Return JSON only. No markdown, no code fences.
+
 Grading criteria based on fast duration:
 - Under 16h: Almost anything is fine. Grade generously.
 - 16-24h: Favor protein + fat. Penalize high sugar/processed carbs.
 - 24-48h: Strict. Bone broth, lean protein, avocado = A. Bread, fruit, sugar = D or lower.
 - 48h+: Very strict. High glycemic foods are dangerous (refeeding syndrome risk). Only gentle foods get above C.
 
-Be precise with portion estimates. Be direct and clinical, not preachy.`;
+Be direct, specific, and clinically useful.`;
 
     // Extract base64 data (strip data URL prefix if present)
     const base64Data = image.includes(",") ? image.split(",")[1] : image;
@@ -98,6 +107,36 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
       .filter((p: any) => p.text)
       .map((p: any) => p.text)
       .join('\n');
+
+    const salvageFromPlainText = (text: string) => {
+      const lower = text.toLowerCase();
+      const lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      const foodLines = lines.filter(l =>
+        /^[\-*•]/.test(l) ||
+        /identified foods|detected foods|foods visible|components/i.test(l)
+      );
+      const primary_components = Array.from(new Set(
+        foodLines
+          .flatMap(l => l.replace(/^[\-*•]\s*/, '').split(/[,;]+/))
+          .map(s => s.trim())
+          .filter(s => s && s.length < 80 && !/grade|warning|impact|recommendation/i.test(s))
+      )).slice(0, 6);
+
+      const metabolic_impact = lines.find(l => /insulin|digest|metabolic|glycemic|refeed/i.test(l)) || '';
+      const safety_warning = lines.find(l => /warning|risk|danger|distress|spike/i.test(l)) || 'None';
+      const recommendation = lines.find(l => /recommend|better|should|start with|eat first/i.test(l)) || '';
+      const gradeMatch = text.match(/\b([ABCDF][+-]?)\b/) || text.match(/grade[^A-Z0-9]*([ABCDF][+-]?)/i);
+
+      return {
+        refeed_grade: gradeMatch ? gradeMatch[1] : 'C',
+        primary_components,
+        estimated_portions: [],
+        metabolic_impact,
+        safety_warning,
+        recommendation,
+        estimated_macros: null,
+      };
+    };
 
     if (!allText) {
       return NextResponse.json({
@@ -161,6 +200,10 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
             recommendation: extractStr('recommendation'),
             estimated_macros: null,
           };
+
+          if (!analysis.primary_components.length && !analysis.metabolic_impact) {
+            analysis = salvageFromPlainText(cleaned);
+          }
         }
       }
     }

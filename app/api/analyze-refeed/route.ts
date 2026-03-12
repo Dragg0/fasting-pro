@@ -32,9 +32,15 @@ First, analyze the image naturally and identify the foods as specifically as pos
 Then produce a COMPLETE JSON object with these exact fields:
 {
   "refeed_grade": "<letter grade A+ through F>",
+  "grade_reason": "<1 sentence: specific metabolic reason for this grade (e.g. 'High glucose spike risk')>",
   "primary_components": ["<specific food 1>", "<specific food 2>", ...],
   "estimated_portions": ["<specific item 1> (~portion)", "<specific item 2> (~portion)", ...],
-  "metabolic_impact": "<2-3 sentences on insulin response, digestion, and metabolic impact after this fast>",
+  "metabolic_impact": {
+    "insulin_impact": "<Low|Moderate|High|Extreme>",
+    "digestive_load": "<Light|Moderate|Heavy|Severe>",
+    "best_first_move": "<Specific advice on what to eat first from this plate>",
+    "deep_analysis": "<2-3 sentences on cellular impact, mTOR/autophagy, and digestion after this fast duration>"
+  },
   "safety_warning": "<specific warning if high-risk for this fast duration, or 'None' if safe>",
   "recommendation": "<1 sentence with the best immediate recommendation>",
   "estimated_macros": {
@@ -51,7 +57,7 @@ Important rules:
 - If uncertain, make your best estimate.
 - primary_components must never be empty.
 - estimated_portions must never be empty.
-- metabolic_impact must always be 2-3 useful sentences.
+- deep_analysis must always be 2-3 useful sentences.
 - Return JSON only. No markdown, no code fences.
 
 Grading criteria based on fast duration:
@@ -228,14 +234,25 @@ Be direct, specific, and clinically useful.`;
       return Object.keys(out).length ? out : null;
     };
 
-    const impactValue = normalizeString(analysis?.metabolic_impact, '');
+    const rawImpact = analysis?.metabolic_impact;
+    const normalizedImpact = (typeof rawImpact === 'object' && !Array.isArray(rawImpact)) ? {
+      insulin_impact: normalizeString(rawImpact.insulin_impact, 'Moderate'),
+      digestive_load: normalizeString(rawImpact.digestive_load, 'Moderate'),
+      best_first_move: normalizeString(rawImpact.best_first_move, 'Eat proteins or healthy fats first.'),
+      deep_analysis: normalizeString(rawImpact.deep_analysis, 'Metabolic impact analysis unavailable for this scan.'),
+    } : {
+      insulin_impact: 'Moderate',
+      digestive_load: 'Moderate',
+      best_first_move: 'Choose whole foods over processed ones.',
+      deep_analysis: normalizeString(rawImpact, 'Metabolic impact analysis unavailable for this scan.'),
+    };
+
     const normalized = {
       refeed_grade: normalizeString(analysis?.refeed_grade, 'C'),
+      grade_reason: normalizeString(analysis?.grade_reason, ''),
       primary_components: normalizeArray(analysis?.primary_components),
       estimated_portions: normalizeArray(analysis?.estimated_portions),
-      metabolic_impact: impactValue && !/^"?refeed_grade"?\s*:/i.test(impactValue)
-        ? impactValue
-        : 'Analysis incomplete — try rescanning in better light or with the full plate visible.',
+      metabolic_impact: normalizedImpact,
       safety_warning: normalizeString(analysis?.safety_warning, 'None'),
       recommendation: normalizeString(
         analysis?.recommendation,

@@ -2406,21 +2406,82 @@ export default function Home() {
                         plateScanResult.refeed_grade?.startsWith('C') ? 'text-yellow-400' :
                         'text-red-400'
                       }`}>{plateScanResult.refeed_grade}</div>
-                      <div className="text-[0.6rem] text-[#98a4bb] mt-1 font-bold">After {currentH.toFixed(0)}h fast</div>
+                      {plateScanResult.grade_reason && (
+                        <div className="text-[0.65rem] text-[#c8d4e8] font-black uppercase tracking-wider mt-2 px-4 leading-tight">
+                          {plateScanResult.grade_reason}
+                        </div>
+                      )}
+                      <div className="text-[0.6rem] text-[#4b5563] mt-2 font-bold uppercase tracking-widest">After {currentH.toFixed(0)}h fast</div>
                     </div>
 
-                    {/* Components */}
+                    {/* Detected Items (Editable Chips) */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
-                      <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Detected Foods</div>
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280]">Detected Components</div>
+                        <div className="text-[0.5rem] font-bold text-cyan-500/60 uppercase">Tap to edit</div>
+                      </div>
                       {((plateScanResult.estimated_portions || plateScanResult.primary_components || []).length > 0) ? (
                         <div className="flex flex-wrap gap-2">
                           {(plateScanResult.estimated_portions || plateScanResult.primary_components || []).map((item: string, i: number) => (
-                            <span key={i} className="text-[0.65rem] font-bold text-white bg-white/10 px-3 py-1 rounded-full">{item}</span>
+                            <button key={i} 
+                              onClick={() => {
+                                const newVal = prompt("Edit component and portion:", item);
+                                if (newVal !== null) {
+                                  const updated = [...(plateScanResult.estimated_portions || plateScanResult.primary_components)];
+                                  updated[i] = newVal;
+                                  setPlateScanResult({ ...plateScanResult, estimated_portions: updated, primary_components: updated });
+                                }
+                              }}
+                              className="text-[0.65rem] font-bold text-white bg-white/10 hover:bg-cyan-500/20 hover:border-cyan-500/30 border border-transparent px-3 py-1.5 rounded-xl transition-all"
+                            >
+                              {item}
+                            </button>
                           ))}
+                          <button 
+                            onClick={() => {
+                              const newVal = prompt("Add new component (e.g. Diet Coke):");
+                              if (newVal) {
+                                const updated = [...(plateScanResult.estimated_portions || plateScanResult.primary_components || []), newVal];
+                                setPlateScanResult({ ...plateScanResult, estimated_portions: updated, primary_components: updated });
+                              }
+                            }}
+                            className="text-[0.65rem] font-bold text-cyan-400 bg-cyan-400/5 border border-dashed border-cyan-400/20 px-3 py-1.5 rounded-xl hover:bg-cyan-400/10"
+                          >
+                            + ADD
+                          </button>
                         </div>
                       ) : (
-                        <p className="text-[0.7rem] text-[#98a4bb]">No foods confidently identified from this scan.</p>
+                        <p className="text-[0.7rem] text-[#98a4bb]">No foods confidently identified.</p>
                       )}
+                    </div>
+
+                    {/* Metabolic Summary (Bullets) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                        <div className="text-[0.5rem] font-black uppercase tracking-widest text-[#6b7280] mb-1">Insulin Impact</div>
+                        <div className={`text-sm font-black ${
+                          plateScanResult.metabolic_impact?.insulin_impact === 'Low' ? 'text-green-400' :
+                          plateScanResult.metabolic_impact?.insulin_impact === 'Moderate' ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                          {plateScanResult.metabolic_impact?.insulin_impact || 'Moderate'}
+                        </div>
+                      </div>
+                      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                        <div className="text-[0.5rem] font-black uppercase tracking-widest text-[#6b7280] mb-1">Digestive Load</div>
+                        <div className={`text-sm font-black ${
+                          plateScanResult.metabolic_impact?.digestive_load === 'Light' ? 'text-green-400' :
+                          plateScanResult.metabolic_impact?.digestive_load === 'Moderate' ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                          {plateScanResult.metabolic_impact?.digestive_load || 'Heavy'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-2xl p-4">
+                      <div className="text-[0.55rem] font-black uppercase tracking-widest text-cyan-400 mb-1">Best First Move</div>
+                      <p className="text-[0.7rem] text-cyan-100 font-bold leading-tight">
+                        {plateScanResult.metabolic_impact?.best_first_move || 'Choose protein or fat first.'}
+                      </p>
                     </div>
 
                     {/* Macros */}
@@ -2438,11 +2499,11 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Impact */}
+                    {/* Impact Analysis */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
-                      <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Metabolic Impact</div>
+                      <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Deep Metabolic Analysis</div>
                       <p className="text-[0.7rem] text-[#c8d4e8] leading-relaxed">
-                        {plateScanResult.metabolic_impact || 'Metabolic impact unavailable from this scan.'}
+                        {plateScanResult.metabolic_impact?.deep_analysis || plateScanResult.metabolic_impact || 'Metabolic impact unavailable.'}
                       </p>
                     </div>
 

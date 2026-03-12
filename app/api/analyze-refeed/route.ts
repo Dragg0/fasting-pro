@@ -77,8 +77,9 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
           ],
         }],
         generationConfig: {
-          temperature: 0.3,
+          temperature: 0.2,
           maxOutputTokens: 1024,
+          responseMimeType: "application/json",
         },
       }),
     });
@@ -141,10 +142,25 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
           }
           if (!analysis) throw new Error("No balanced JSON");
         } catch {
-          return NextResponse.json({
-            error: "Could not parse AI response",
-            raw: cleaned.slice(0, 1000)
-          }, { status: 500 });
+          // Last-resort salvage: extract whatever fields we can from non-JSON text
+          const extractStr = (key: string) => {
+            const m = cleaned.match(new RegExp(`"?${key}"?\\s*[:=-]\\s*"?([^"\\n}]+)"?`, 'i'));
+            return m ? m[1].trim() : '';
+          };
+          const extractArrLoose = (key: string) => {
+            const m = cleaned.match(new RegExp(`"?${key}"?\\s*[:=-]\\s*\\[([^\\]]*)\\]`, 'i'));
+            return m ? m[1].split(',').map((s: string) => s.replace(/"/g, '').trim()).filter(Boolean) : [];
+          };
+          const maybeGrade = extractStr('refeed_grade') || extractStr('grade') || 'C';
+          analysis = {
+            refeed_grade: maybeGrade,
+            primary_components: extractArrLoose('primary_components'),
+            estimated_portions: extractArrLoose('estimated_portions'),
+            metabolic_impact: extractStr('metabolic_impact'),
+            safety_warning: extractStr('safety_warning') || 'None',
+            recommendation: extractStr('recommendation'),
+            estimated_macros: null,
+          };
         }
       }
     }

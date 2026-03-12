@@ -109,22 +109,30 @@ Be direct, specific, and clinically useful.`;
       .join('\n');
 
     const salvageFromPlainText = (text: string) => {
-      const lower = text.toLowerCase();
       const lines = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      const cleanLine = (l: string) => l.replace(/^[-*•]\s*/, '').trim();
+      const looksJsony = (l: string) => /[{}["]/.test(l) || /^\w+\s*:/i.test(l) || /refeed_grade|estimated_macros|primary_components/i.test(l);
+
       const foodLines = lines.filter(l =>
-        /^[\-*•]/.test(l) ||
-        /identified foods|detected foods|foods visible|components/i.test(l)
+        !looksJsony(l) && (
+          /^[\-*•]/.test(l) ||
+          /identified foods|detected foods|foods visible|components|rice|beans|enchilada|tortilla|cheese|soda|cola|salad|chicken|beef|pork|egg|avocado/i.test(l)
+        )
       );
+
       const primary_components = Array.from(new Set(
         foodLines
-          .flatMap(l => l.replace(/^[\-*•]\s*/, '').split(/[,;]+/))
+          .flatMap(l => cleanLine(l).split(/[,;]+/))
           .map(s => s.trim())
-          .filter(s => s && s.length < 80 && !/grade|warning|impact|recommendation/i.test(s))
-      )).slice(0, 6);
+          .filter(s => s && s.length < 80 && !/grade|warning|impact|recommendation|calories|protein|fat|carbs|fiber/i.test(s))
+      )).slice(0, 8);
 
-      const metabolic_impact = lines.find(l => /insulin|digest|metabolic|glycemic|refeed/i.test(l)) || '';
-      const safety_warning = lines.find(l => /warning|risk|danger|distress|spike/i.test(l)) || 'None';
-      const recommendation = lines.find(l => /recommend|better|should|start with|eat first/i.test(l)) || '';
+      const impactCandidates = lines.filter(l =>
+        !looksJsony(l) && /insulin|digest|metabolic|glycemic|spike|stomach|refeed|gut|glucose/i.test(l)
+      );
+      const metabolic_impact = impactCandidates.slice(0, 2).join(' ') || '';
+      const safety_warning = lines.find(l => !looksJsony(l) && /warning|risk|danger|distress|diarrhea|spike/i.test(l)) || 'None';
+      const recommendation = lines.find(l => !looksJsony(l) && /recommend|better|should|start with|eat first|choose/i.test(l)) || '';
       const gradeMatch = text.match(/\b([ABCDF][+-]?)\b/) || text.match(/grade[^A-Z0-9]*([ABCDF][+-]?)/i);
 
       return {
@@ -220,14 +228,14 @@ Be direct, specific, and clinically useful.`;
       return Object.keys(out).length ? out : null;
     };
 
+    const impactValue = normalizeString(analysis?.metabolic_impact, '');
     const normalized = {
       refeed_grade: normalizeString(analysis?.refeed_grade, 'C'),
       primary_components: normalizeArray(analysis?.primary_components),
       estimated_portions: normalizeArray(analysis?.estimated_portions),
-      metabolic_impact: normalizeString(
-        analysis?.metabolic_impact,
-        'Analysis incomplete — try rescanning in better light or with the full plate visible.'
-      ),
+      metabolic_impact: impactValue && !/^"?refeed_grade"?\s*:/i.test(impactValue)
+        ? impactValue
+        : 'Analysis incomplete — try rescanning in better light or with the full plate visible.',
       safety_warning: normalizeString(analysis?.safety_warning, 'None'),
       recommendation: normalizeString(
         analysis?.recommendation,

@@ -149,7 +149,45 @@ Be precise with portion estimates. Be direct and clinical, not preachy.`;
       }
     }
 
-    return NextResponse.json(analysis);
+    const normalizeArray = (v: any) => Array.isArray(v) ? v.filter(Boolean) : [];
+    const normalizeString = (v: any, fallback = '') => (typeof v === 'string' && v.trim() ? v.trim() : fallback);
+    const normalizeMacros = (v: any) => {
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+      const out: Record<string, string> = {};
+      for (const key of ['protein', 'fat', 'carbs', 'fiber', 'calories']) {
+        const val = v[key];
+        if (typeof val === 'string' && val.trim()) out[key] = val.trim();
+      }
+      return Object.keys(out).length ? out : null;
+    };
+
+    const normalized = {
+      refeed_grade: normalizeString(analysis?.refeed_grade, 'C'),
+      primary_components: normalizeArray(analysis?.primary_components),
+      estimated_portions: normalizeArray(analysis?.estimated_portions),
+      metabolic_impact: normalizeString(
+        analysis?.metabolic_impact,
+        'Analysis incomplete — try rescanning in better light or with the full plate visible.'
+      ),
+      safety_warning: normalizeString(analysis?.safety_warning, 'None'),
+      recommendation: normalizeString(
+        analysis?.recommendation,
+        'Rescan for fuller analysis or choose a gentler first meal.'
+      ),
+      estimated_macros: normalizeMacros(analysis?.estimated_macros),
+      debug_raw_present: true,
+    };
+
+    console.log('Plate scan normalized result:', JSON.stringify({
+      grade: normalized.refeed_grade,
+      primary_components_count: normalized.primary_components.length,
+      estimated_portions_count: normalized.estimated_portions.length,
+      has_metabolic_impact: !!normalized.metabolic_impact,
+      has_macros: !!normalized.estimated_macros,
+      raw_preview: cleaned.slice(0, 400)
+    }));
+
+    return NextResponse.json(normalized);
 
   } catch (error: any) {
     console.error("AI Analysis Error:", error);

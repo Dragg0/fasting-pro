@@ -2412,11 +2412,15 @@ export default function Home() {
                     {/* Components */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
                       <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Detected Foods</div>
-                      <div className="flex flex-wrap gap-2">
-                        {(plateScanResult.estimated_portions || plateScanResult.primary_components || []).map((item: string, i: number) => (
-                          <span key={i} className="text-[0.65rem] font-bold text-white bg-white/10 px-3 py-1 rounded-full">{item}</span>
-                        ))}
-                      </div>
+                      {((plateScanResult.estimated_portions || plateScanResult.primary_components || []).length > 0) ? (
+                        <div className="flex flex-wrap gap-2">
+                          {(plateScanResult.estimated_portions || plateScanResult.primary_components || []).map((item: string, i: number) => (
+                            <span key={i} className="text-[0.65rem] font-bold text-white bg-white/10 px-3 py-1 rounded-full">{item}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[0.7rem] text-[#98a4bb]">No foods confidently identified from this scan.</p>
+                      )}
                     </div>
 
                     {/* Macros */}
@@ -2437,7 +2441,9 @@ export default function Home() {
                     {/* Impact */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
                       <div className="text-[0.55rem] font-black uppercase tracking-widest text-[#6b7280] mb-2">Metabolic Impact</div>
-                      <p className="text-[0.7rem] text-[#c8d4e8] leading-relaxed">{plateScanResult.metabolic_impact}</p>
+                      <p className="text-[0.7rem] text-[#c8d4e8] leading-relaxed">
+                        {plateScanResult.metabolic_impact || 'Metabolic impact unavailable from this scan.'}
+                      </p>
                     </div>
 
                     {/* Warning */}
